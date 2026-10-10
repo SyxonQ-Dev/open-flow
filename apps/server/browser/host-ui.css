@@ -174,11 +174,11 @@
 }
 
 .host-card-heading-copy p {
-  max-width: 65ch;
   margin: 0;
   color: var(--ui-muted-foreground);
   font-size: var(--ui-font-size);
   line-height: 18px;
+  text-wrap: pretty;
 }
 
 .host-card-heading span,

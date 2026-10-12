@@ -51,11 +51,10 @@
     },
     "packages/command": {
       "name": "@oomol-lab/open-flow-command",
-      "version": "0.1.0-beta.60",
+      "version": "0.1.0-beta.61",
       "dependencies": {
         "@oomol-lab/open-flow": "workspace:*",
         "@wopjs/cast": "^0.1.16",
-        "modern-tar": "0.7.6",
         "val-i18n": "^0.1.14",
         "zod": "4.6.5",
       },
@@ -70,7 +69,7 @@
     },
     "packages/open-flow": {
       "name": "@oomol-lab/open-flow",
-      "version": "0.1.0-beta.60",
+      "version": "0.1.0-beta.61",
       "devDependencies": {
         "@babel/parser": "8.0.4",
         "@babel/traverse": "8.0.4",

@@ -21,7 +21,7 @@ Protocol adapters must not create a second authoring or Run state machine.
 | Owner                | Responsibility                                                                                                                                                                      |
 | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `packages/open-flow` | Public models and decoding, node authoring, Control API and MCP contracts, deterministic validation and graph execution, conformance tests, product-neutral Workbench and shared UI |
-| `packages/command`   | CLI arguments and output, the Command Host boundary, Command Artifact builds and distribution                                                                                       |
+| `packages/command`   | CLI arguments and output, the Command Host boundary, command entry builds for the public npm package                                                                                |
 | `apps/server`        | Server lifecycle, authentication, persistence, scheduling, isolated execution host, HTTP/MCP adapters, Workbench host, and container delivery                                       |
 | Other deployments    | Their infrastructure, authentication, application lifecycle, external capability mediation, and production Workbench host                                                           |
 
@@ -148,9 +148,15 @@ A publish operation can prepare external resources asynchronously. Only after al
 The previous Live remains valid during preparation and after failure. Rollback creates a new Publication without changing historical versions.
 Changes that cannot prepare independent candidate resources must be rejected. They must not damage live resources and rely on compensation to recover.
 
-The Flow enable switch, Live version, and individual Trigger pause states are independent.
+The Flow enable switch controls all Trigger admission for the current Live version. Individual Triggers have no manual pause state.
 Disabling a Flow blocks new production admission but does not cancel accepted Runs.
 Live and the current Trigger binding jointly determine admission authority. Old workers and candidate callbacks cannot bypass this boundary.
+
+Published resource queries default to Live and may pin a Publication. Their configuration comes from
+that Publication's fixed Revision. Only the current Live may include matching runtime bindings and
+callable endpoints; historical queries do not reconstruct past health or borrow current bindings.
+Resources currently comprise non-Manual Triggers. They are a read view of existing owners, not a
+separate resource store or lifecycle.
 
 The public package owns deterministic Trigger definitions, output validation, and conformance tests.
 The deployment owns progress, deduplication, scheduling, routing, and admission transactions.
@@ -215,7 +221,7 @@ Do not maintain exact fields, numeric limits, usage examples, storage algorithms
 | Node-compatible execution environment                                  | [Node runtime contract](control/contracts/nodejs-runtime.md)                                                             |
 | Connection use and execution authorization                             | [Flow authorization](control/flow-authorization.md), [Trigger permissions and execution](control/trigger-permissions.md) |
 | Node development and verification                                      | [Node authoring](authoring/node-authoring.md), [CLI Lab](authoring/cli-lab.md)                                           |
-| CLI delivery and invocation contracts                                  | [Command Artifact](distribution/command-artifact.md)                                                                     |
+| CLI delivery and invocation contracts                                  | [Command distribution](distribution/command.md)                                                                          |
 | Server configuration, authentication, and deployment                   | [Container delivery](server/container-delivery.md), [User system](server/users.md), [MCP](server/mcp.md)                 |
 | Trigger usage                                                          | [Flow Error](triggers/error-trigger.md), [Linear Issue Trigger](triggers/linear-trigger.md)                              |
 | Frontend integration and component interaction                         | [frontend-ui skill](../.agents/skills/frontend-ui/SKILL.md), production components, and Lab stories                      |

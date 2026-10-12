@@ -1,4 +1,9 @@
 import type { AuthoringRead, AuthoringSearch, AuthoringRequest, AuthoringType } from './authoringSchema.ts'
+import type { PublicationResources, PublicationResourceDetail } from './publicationResources.ts'
+
+import { decodePublicationResources, decodePublicationResource } from './publicationResources.ts'
+export { publicationResources } from './publicationResources.ts'
+export type { PublicationResource, PublicationResources, PublicationResourceDetail } from './publicationResources.ts'
 import type { ProviderIconAppearance } from './providerIconSprite.ts'
 
 import { authoringReadResponse, authoringSearchResponse, authoringEditResponse, authoringCheckResponse } from './authoringSchema.ts'
@@ -153,7 +158,6 @@ export interface TriggerBinding {
   readonly health: 'failed' | 'healthy' | 'initializing' | 'needs_reauth' | 'suspended'
   readonly kind: 'error' | 'cron' | 'integration' | 'poll' | 'webhook'
   readonly lastErrorCode?: string
-  readonly operatorState: 'active' | 'paused'
   readonly runtimeVersion: number
   readonly triggerNodeId: string
   readonly updatedAt: string
@@ -881,24 +885,6 @@ export class ControlClient {
     return triggerActivityPage(await this.request(`/v1/flows/${segment(flowId)}/triggers/${segment(triggerNodeId)}/activities${query}`))
   }
 
-  async pauseFlowTrigger(flowId: string, triggerNodeId: string): Promise<TriggerBinding> {
-    return triggerBinding(
-      await this.request(`/v1/flows/${segment(flowId)}/triggers/${segment(triggerNodeId)}/pause`, {
-        body: JSON.stringify({ version: 1 }),
-        method: 'POST',
-      }),
-    )
-  }
-
-  async resumeFlowTrigger(flowId: string, triggerNodeId: string): Promise<TriggerBinding> {
-    return triggerBinding(
-      await this.request(`/v1/flows/${segment(flowId)}/triggers/${segment(triggerNodeId)}/resume`, {
-        body: JSON.stringify({ version: 1 }),
-        method: 'POST',
-      }),
-    )
-  }
-
   async testFlowPollTrigger(flowId: string, triggerNodeId: string): Promise<PollTriggerTestResult> {
     return pollTriggerTestResult(
       await this.request(`/v1/flows/${segment(flowId)}/triggers/${segment(triggerNodeId)}/test`, {
@@ -1154,6 +1140,21 @@ export class ControlClient {
 
   async getLive(flowId: string, signal?: AbortSignal): Promise<Live> {
     return live(await this.request(`/v1/flows/${segment(flowId)}/live`, { signal }))
+  }
+
+  async listPublicationResources(flowId: string, publicationId?: string): Promise<PublicationResources> {
+    const query = publicationId == null ? '' : `?publicationId=${encodeURIComponent(publicationId)}`
+    const result = decodePublicationResources(await this.request(`/v1/flows/${segment(flowId)}/resources${query}`))
+    if (result.flowId != flowId || (publicationId != null && result.publicationId != publicationId)) return invalidResponse()
+    return result
+  }
+
+  async getPublicationResource(flowId: string, resourceId: string, publicationId?: string): Promise<PublicationResourceDetail> {
+    const query = publicationId == null ? '' : `?publicationId=${encodeURIComponent(publicationId)}`
+    const result = decodePublicationResource(await this.request(`/v1/flows/${segment(flowId)}/resources/${segment(resourceId)}${query}`))
+    if (result.flowId != flowId || result.resource.resourceId != resourceId || (publicationId != null && result.publicationId != publicationId))
+      return invalidResponse()
+    return result
   }
 
   async listPublications(

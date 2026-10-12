@@ -450,6 +450,7 @@
       "pageInvalidCursor": "列表載入期間內容已變更，請重新載入列表。",
       "publicationConflict": "發布狀態已變更，請重新整理後再試一次。",
       "publicationNotFound": "找不到這筆發布記錄，請重新整理發布列表。",
+      "resourceNotFound": "此發布版本中找不到該資源。",
       "publicationUnsupported": "現有的 Trigger 訂閱無法安全變更，因此無法發布此 Flow。",
       "publishOperationNotFound": "本次發布狀態已無法使用，請重新發起發布。",
       "responseInvalid": "服務傳回了無法識別的資料，請稍後再試一次。",
@@ -478,9 +479,7 @@
     "networkFailed": "暫時無法連線到服務，請檢查網路後再試一次。",
     "published": "已發布 {{name}}。",
     "rolledBack": "已將線上版本還原到修訂 {{revision}}。",
-    "requestFailed": "服務未能完成此操作，請稍後再試一次。",
-    "triggerPaused": "Trigger 啟用已暫停。",
-    "triggerResumed": "Trigger 啟用正在恢復。"
+    "requestFailed": "服務未能完成此操作，請稍後再試一次。"
   },
   "publication": {
     "active": "運作中",
@@ -521,9 +520,6 @@
     "none": "尚未發布",
     "notPublished": "尚未發布",
     "operation": "操作",
-    "operatorState": "操作者狀態",
-    "pauseTrigger": "暫停",
-    "pausingTrigger": "正在暫停…",
     "publishDraft": "發布到線上",
     "publishConfirm": "發佈目前草稿？",
     "publishConfirmDescription": "發佈後，目前草稿將成為線上版本。",
@@ -539,8 +535,6 @@
     "pollTestResult": "測試結果",
     "pollTesting": "正在測試…",
     "reconciling": "同步中",
-    "resumeTrigger": "恢復",
-    "resumingTrigger": "正在恢復…",
     "retired": "已停用",
     "revision": "固定修訂",
     "rollback": "還原",

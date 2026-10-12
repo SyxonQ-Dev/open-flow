@@ -450,6 +450,7 @@
       "pageInvalidCursor": "読み込み中に一覧が変更されました。一覧を再読み込みしてください。",
       "publicationConflict": "公開状態は読み込み後に変更されました。更新してから再試行してください。",
       "publicationNotFound": "この Publication は存在しないか、削除されています。Publication 一覧を更新してください。",
+      "resourceNotFound": "この公開バージョンにリソースが見つかりません。",
       "publicationUnsupported": "既存の Trigger サブスクリプションを安全に変更できないため、この Flow は公開できません。",
       "publishOperationNotFound": "公開状況を確認できなくなりました。もう一度公開を開始してください。",
       "responseInvalid": "サービスから読み取れないデータが返されました。しばらくしてから再試行してください。",
@@ -478,9 +479,7 @@
     "networkFailed": "サービスに接続できません。ネットワーク接続を確認してから再試行してください。",
     "published": "{{name}} を公開しました。",
     "rolledBack": "本番をリビジョン {{revision}} にロールバックしました。",
-    "requestFailed": "サービスがこの操作を完了できませんでした。しばらくしてから再試行してください。",
-    "triggerPaused": "Trigger の有効化を一時停止しました。",
-    "triggerResumed": "Trigger の有効化を再開しています。"
+    "requestFailed": "サービスがこの操作を完了できませんでした。しばらくしてから再試行してください。"
   },
   "publication": {
     "active": "稼働中",
@@ -521,9 +520,6 @@
     "none": "未公開",
     "notPublished": "未公開",
     "operation": "操作",
-    "operatorState": "オペレーター状態",
-    "pauseTrigger": "一時停止",
-    "pausingTrigger": "一時停止中…",
     "publishDraft": "本番へ公開",
     "publishConfirm": "現在の下書きを公開しますか？",
     "publishConfirmDescription": "公開すると、現在の下書きが公開中のバージョンになります。",
@@ -539,8 +535,6 @@
     "pollTestResult": "テスト結果",
     "pollTesting": "テスト中…",
     "reconciling": "同期中",
-    "resumeTrigger": "再開",
-    "resumingTrigger": "再開中…",
     "retired": "停止済み",
     "revision": "固定リビジョン",
     "rollback": "ロールバック",

@@ -99,6 +99,8 @@ Reverse proxies should preserve `/v1/mcp`, Authorization, Accept, Content-Type, 
 | `connector_get`                | `actionId`, `flowId?`                                                                      | Action ports and connection requirements.                               |
 | `connector_connections`        | `serviceId`, `flowId?`                                                                     | Connections.                                                            |
 | `event_source_list`            | None                                                                                       | Independent event sources visible to the current identity.              |
+| `flow_resources`               | `flowId`, `publicationId?`                                                                 | Published resources; defaults to current Live.                          |
+| `flow_resource_get`            | `flowId`, `resourceId`, `publicationId?`                                                   | One published resource and its configuration.                           |
 | `trigger_search`               | `query?`                                                                                   | Provider Trigger keys.                                                  |
 | `trigger_get`                  | `key`                                                                                      | Provider Trigger definition.                                            |
 
@@ -107,6 +109,11 @@ All tools reject undeclared top-level parameters. Flow, Run, and event lists acc
 `run_results` returns up to 50 items per page. Pass `nextAfter` unchanged as the next `after`. `run_result_read` shares Control API result query rules: `pointer` defaults to an empty string (root) and permits up to 4096 characters; `offset` defaults to 0; `limit` defaults to 20 with range 1–100; `maxBytes` defaults to 15000 with range 1–1048576. Use `nextOffset` to read the next page at the same pointer. A value with `complete: true` contains the full value at that path.
 
 Results are readable only under their owning Run and do not require a terminal Run. They differ from the terminal `run_result` and do not depend on event retention.
+
+`flow_resources` and `flow_resource_get` share the [published resources contract](../control/contracts/control-api.md#published-resources).
+They return fixed publication configuration and, only for current Live, matching runtime state.
+Manual entry nodes are excluded. Historical results contain no runtime state or callable URLs.
+Use the returned `publicationId` in follow-up calls to avoid switching versions after a concurrent publish.
 
 Typical workflow:
 
@@ -174,4 +181,4 @@ Node reads map to `oo flow read FLOW_ID --input '{"revision":"REVISION","nodes":
 
 `flow_code_connections` maps to `connector code-access FLOW_ID [--publication PUBLICATION_ID]`. `flow_connection_candidates` maps to `connector candidates FLOW_ID PROVIDER_ID [PROVIDER_ID ...]`. Connection reads do not require readable Draft content. Publication snapshots are read-only; connection selection and global removal modify only Draft.
 
-Trigger search returns `keys` on both interfaces. Other CLI commands retain terminal wrappers, such as `run` for `runs show`, `action` for `connector show`, and `check` for `check`. MCP tools return those business objects directly. CLI `kind`, wait results, exit codes, and stdout/stderr belong to the command contract and differ from MCP `content`, `structuredContent`, and `isError`. Flow/Run/event page defaults are 100 for CLI and 50 for MCP. CLI can generate idempotency keys, select current versions, and wait for publication. MCP requires explicit pinned identities and caller polling. See the [CLI invocation contract](../distribution/command-artifact.md#cli-invocation-contract).
+Trigger search returns `keys` on both interfaces. Other CLI commands retain terminal wrappers, such as `run` for `runs show`, `action` for `connector show`, and `check` for `check`. MCP tools return those business objects directly. CLI `kind`, wait results, exit codes, and stdout/stderr belong to the command contract and differ from MCP `content`, `structuredContent`, and `isError`. Flow/Run/event page defaults are 100 for CLI and 50 for MCP. CLI can generate idempotency keys, select current versions, and wait for publication. MCP requires explicit pinned identities and caller polling. See the [CLI invocation contract](../distribution/command.md#cli-invocation-contract).

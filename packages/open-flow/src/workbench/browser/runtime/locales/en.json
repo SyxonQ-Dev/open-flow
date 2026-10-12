@@ -450,6 +450,7 @@
       "pageInvalidCursor": "This list changed while it was loading. Reload the list.",
       "publicationConflict": "The publication state changed since it was loaded. Refresh and try again.",
       "publicationNotFound": "This Publication does not exist or was deleted. Refresh the Publication list.",
+      "resourceNotFound": "The resource was not found in this publication.",
       "publicationUnsupported": "This Flow cannot be published because an existing Trigger subscription cannot be changed safely.",
       "publishOperationNotFound": "The publishing status is no longer available. Start publishing again.",
       "responseInvalid": "The service returned data that Open Flow could not read. Try again later.",
@@ -478,9 +479,7 @@
     "networkFailed": "Could not reach the service. Check your connection and try again.",
     "published": "Published {{name}}.",
     "rolledBack": "Rolled Live back to revision {{revision}}.",
-    "requestFailed": "The service could not complete this operation. Try again later.",
-    "triggerPaused": "Trigger activation is paused.",
-    "triggerResumed": "Trigger activation is resuming."
+    "requestFailed": "The service could not complete this operation. Try again later."
   },
   "publication": {
     "active": "Active",
@@ -521,9 +520,6 @@
     "none": "Not published",
     "notPublished": "Not published",
     "operation": "Operation",
-    "operatorState": "Operator state",
-    "pauseTrigger": "Pause",
-    "pausingTrigger": "Pausing…",
     "publishDraft": "Publish to Live",
     "publishConfirm": "Publish this draft?",
     "publishConfirmDescription": "The current draft will become the live version.",
@@ -539,8 +535,6 @@
     "pollTestResult": "Test result",
     "pollTesting": "Testing…",
     "reconciling": "Reconciling",
-    "resumeTrigger": "Resume",
-    "resumingTrigger": "Resuming…",
     "retired": "Retired",
     "revision": "Fixed revision",
     "rollback": "Roll back",

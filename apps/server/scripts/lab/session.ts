@@ -26,6 +26,7 @@ import { SettingsStore } from '../../node/storage/settings-store.ts'
 import { createServerApp } from '../../node/transport/http.ts'
 import { runtimeAssertions } from './acceptance.ts'
 import { fulfillmentRuntimeAssertions } from './fulfillmentAcceptance.ts'
+import { verifyLiveWebhook } from './liveAcceptance.ts'
 import { createMocks } from './mocks.ts'
 import { labOrigins } from './network.ts'
 import { diff, summary } from './report.ts'
@@ -315,6 +316,7 @@ export class LabSession {
       .update(JSON.stringify([scenario(this.scenarioId, this.stage), this.baseline, samples(this.scenarioId, this.stage)]))
       .update(await readFile(new URL('./acceptance.ts', import.meta.url)))
       .update(await readFile(new URL('./scenarios.ts', import.meta.url)))
+    if (this.scenarioId == 'webhook-live') identity.update(await readFile(new URL('./liveAcceptance.ts', import.meta.url)))
     if (this.scenarioId == 'fulfillment-ops')
       identity
         .update(await readFile(new URL('./fulfillment.ts', import.meta.url)))
@@ -379,7 +381,11 @@ export class LabSession {
         if (!this.attempt.rejectedEdits) errors.push('No stale edit was rejected without changing the Draft.')
         if (this.service.control.runs.listRuns(this.manifest.flowId, 1, {}).page.runs.length > 0) errors.push('Unexpected run before verification.')
       }
-      if (errors.length == 0) {
+      if (errors.length == 0 && this.scenarioId == 'webhook-live') {
+        const result = await verifyLiveWebhook(this)
+        errors.push(...result.errors)
+        runIds.push(...result.runIds)
+      } else if (errors.length == 0) {
         const entry = scenario(this.scenarioId).entry
         const triggers = Object.entries(revision.content.document.graph.nodes).filter(([id, node]) =>
           'node' in entry ? id == entry.node : node.kind == entry.kind,

@@ -104,10 +104,7 @@ function createServer(service: ServerService, actorId: string, logger: Logger, e
     })
   }
 
-  register('flow_resources', mcpTools.flow_resources, ({ flowId, publicationId }) => control.listPublicationResources(flowId, endpointOrigin, publicationId))
-  register('flow_resource_get', mcpTools.flow_resource_get, ({ flowId, resourceId, publicationId }) =>
-    control.getPublicationResource(flowId, resourceId, endpointOrigin, publicationId),
-  )
+  register('flow_live', mcpTools.flow_live, ({ flowId }) => control.getLiveDetails(flowId, endpointOrigin))
   register('flow_list', mcpTools.flow_list, ({ cursor, limit }) => {
     const { next, page } = control.listFlows(limit, cursor == null ? undefined : decodeFlowCursor(cursor), false, actorId)
     return { ...page, ...(next == null ? {} : { nextCursor: encodeFlowCursor(next) }) }

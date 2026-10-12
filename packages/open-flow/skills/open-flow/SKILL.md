@@ -9,7 +9,7 @@ Use `<!-- agentic:var flowCommand -->` to operate the selected deployment.
 Consult the references relevant to the task:
 
 - [Flow capabilities and examples](references/flow-authoring.md): inspect, edit,
-  connect, validate, run and publish; published resources, Flow enable/disable,
+  connect, validate, run and publish; online entries and Flow enable/disable;
   concurrency and Run diagnostics.
 - [n8n conversion](references/flow-n8n-conversion.md): represent collections,
   branches, provider operations and state while preserving source behavior.
@@ -29,5 +29,8 @@ Server; do not duplicate them in the CLI.
 <!-- agentic:endif -->
 
 Keep the requested boundary: editing a Draft does not authorize a Run,
-publication, or enabling automatic execution. Report the resulting Flow and
-Revision, verification result, and any unresolved configuration.
+publication, or enabling automatic execution. Inspecting an entry does not
+by itself authorize invoking it. For edits, report the Flow and Revision,
+verification result, and unresolved configuration. For a publication, report
+the Publication and available online entries. For a query, report the observed
+online state.

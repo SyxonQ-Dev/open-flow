@@ -42,7 +42,6 @@ const errorKeys = {
   [controlErrorCode.pageInvalidCursor]: 'notice.error.pageInvalidCursor',
   [controlErrorCode.publicationConflict]: 'notice.error.publicationConflict',
   [controlErrorCode.publicationNotFound]: 'notice.error.publicationNotFound',
-  [controlErrorCode.resourceNotFound]: 'notice.error.resourceNotFound',
   [controlErrorCode.publicationUnsupported]: 'notice.error.publicationUnsupported',
   [controlErrorCode.publishOperationNotFound]: 'notice.error.publishOperationNotFound',
   [controlErrorCode.routeNotFound]: 'notice.error.routeNotFound',

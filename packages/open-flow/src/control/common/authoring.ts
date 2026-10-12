@@ -41,6 +41,7 @@ import { llmConfigurationView, prepareLlmConfiguration, initialAuthoringLlmTask 
 import { AuthoringOpenApiAuthenticationError, openApiConfigView, openApiAuthenticationChoices, prepareOpenApiTask } from './authoringOpenApi.ts'
 import { authoringConfigurations, authoringReadSchema, authoringRequestSchema, authoringSearchSchema } from './authoringSchema.ts'
 import { AuthoringToolInputError, outwardAgentTools, prepareAgentTools } from './authoringTools.ts'
+import { triggerConfiguration } from './authoringTriggers.ts'
 export * from './authoringSchema.ts'
 
 const record = (value: unknown): Record<string, unknown> =>
@@ -157,22 +158,13 @@ export function authoringNode(content: RevisionContent, ref: string) {
         config = { inputs: fieldsView(node.inputDefinitions) }
         texts.prompt = node.prompt
         break
+      case 'manual':
       case 'webhook':
-        config = { body: fieldsView(node.bodyFields), method: node.method, ...(node.options == null ? {} : { options: node.options }) }
-        break
       case 'cron':
-        config = { schedule: node.cronTimes }
-        break
       case 'error':
-        config = node.sourceFlowIds == null ? {} : { sourceFlowIds: node.sourceFlowIds }
-        break
       case 'poll':
       case 'integration':
-        config = {
-          key: node.definition.key,
-          ...(node.connectionId == null ? {} : { connectionId: node.connectionId }),
-          ...(node.kind == 'poll' ? { schedule: node.pollTimes } : {}),
-        }
+        config = triggerConfiguration(node)
         break
     }
   }

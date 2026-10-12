@@ -3,6 +3,7 @@ import type { ParsedArguments } from './arguments.ts'
 import type { Runtime } from './support.ts'
 
 import { ControlClient, isRunTerminalEvent } from '@oomol-lab/open-flow/control-api'
+import { liveText } from './live.ts'
 import {
   CliError,
   argumentText,
@@ -240,22 +241,51 @@ export async function publishCommand(client: ControlClient, operands: readonly s
       idempotencyKey: args.idempotencyKey,
     })
   }
-  let publication
+  const warnings: { code: string; message: string }[] = []
+  const query = `${runtime.commandPrefix ?? 'oo flow'} live ${flow.flowId} --json`
+  let live
   try {
-    publication = await publicationById(client, flow.flowId, operation.publicationId)
-  } catch (error) {
-    throw new CliError('publication.read-failed', error instanceof Error ? error.message : String(error), {
-      flowId: flow.flowId,
-      operationId: operation.operationId,
-      publicationId: operation.publicationId,
-      idempotencyKey: args.idempotencyKey,
+    live = await client.getLiveDetails(flow.flowId)
+    if (live.publication?.publicationId != operation.publicationId) {
+      warnings.push({
+        code: 'live.publication-changed',
+        message: `Publication ${operation.publicationId} succeeded. Current Live is ${live.publication?.publicationId ?? 'not-published'}; the returned entries describe that current version.`,
+      })
+    }
+  } catch {
+    warnings.push({
+      code: 'live.details-read-failed',
+      message: `Publication ${operation.publicationId} succeeded, but its current online entries could not be read. Query ${query}.`,
     })
   }
+  let publication = live?.publication?.publicationId == operation.publicationId ? live.publication : undefined
+  if (publication == null)
+    try {
+      publication = await publicationById(client, flow.flowId, operation.publicationId)
+    } catch {
+      warnings.push({
+        code: 'publication.read-failed',
+        message: `Publication ${operation.publicationId} succeeded, but its metadata could not be read. Query ${query}.`,
+      })
+    }
   write(
     runtime,
     args.json,
-    { kind: 'publication.publish', expectedPublicationId, idempotencyKey: args.idempotencyKey, publication, version: 1 },
-    publicationText(publication),
+    {
+      kind: 'publication.publish',
+      expectedPublicationId,
+      idempotencyKey: args.idempotencyKey,
+      operation,
+      ...(publication == null ? {} : { publication }),
+      ...(live == null ? {} : { live }),
+      ...(warnings.length == 0 ? {} : { warnings }),
+      version: 1,
+    },
+    [
+      publication == null ? `published\t${operation.publicationId}\t${operation.revisionId}` : publicationText(publication),
+      ...(live == null ? [] : [liveText(live)]),
+      ...warnings.map((warning) => `Warning: ${warning.message}`),
+    ].join('\n'),
   )
 }
 

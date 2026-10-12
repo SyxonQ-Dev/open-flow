@@ -4,6 +4,7 @@ import type { CommandHost, Runtime } from './support.ts'
 import { ControlClient } from '@oomol-lab/open-flow/control-api'
 import { controlRequests } from '@oomol-lab/open-flow/control-requests'
 import { connectorCommand, triggerCommand } from './connectorCommands.ts'
+import { liveText } from './live.ts'
 import { createRunCommand, publicationsCommand, publishCommand, rollbackCommand, runsCommand } from './runCommands.ts'
 import { argumentText, checkedResourceName, CliError, flowText, referencedFlow, requireCount, write } from './support.ts'
 
@@ -94,40 +95,17 @@ export async function flowCommand(client: ControlClient, host: CommandHost, args
       write(runtime, args.json, { flow, idempotencyKey: args.idempotencyKey, kind: 'flow.create', version: 1 }, flowText(flow))
       return
     }
+    case 'live': {
+      requireCount(operands, 1, `${runtime.commandPrefix ?? 'oo flow'} live <flow> [--json]`)
+      const flow = await referencedFlow(client, operands[0]!)
+      const live = await client.getLiveDetails(flow.flowId)
+      write(runtime, args.json, { kind: 'flow.live', live, version: 1 }, liveText(live))
+      return
+    }
     case 'show': {
       requireCount(operands, 1, `${runtime.commandPrefix ?? 'oo flow'} show <flow> [--json]`)
       const flow = await referencedFlow(client, operands[0]!)
       write(runtime, args.json, { flow, kind: 'flow.show', version: 1 }, flowText(flow))
-      return
-    }
-    case 'resources': {
-      if (operands.length < 1 || operands.length > 2)
-        throw new CliError(
-          'cli.invalid-arguments',
-          `Usage: ${runtime.commandPrefix ?? 'oo flow'} resources <flow> [resource-id] [--publication <publicationId>] [--json]`,
-        )
-      const flow = await referencedFlow(client, operands[0]!)
-      const result =
-        operands[1] == null
-          ? await client.listPublicationResources(flow.flowId, args.publication)
-          : await client.getPublicationResource(flow.flowId, operands[1], args.publication)
-      const header = `${result.status}\t${result.publicationId}\t${result.revisionId}${result.enabled == null ? '' : `\t${result.enabled ? 'enabled' : 'disabled'}`}`
-      const text =
-        'resource' in result
-          ? `${header}\n${JSON.stringify(result.resource, null, 2)}`
-          : [
-              header,
-              ...result.resources.map((resource) =>
-                [
-                  resource.resourceId,
-                  resource.name,
-                  `${resource.kind}.${resource.type}`,
-                  resource.runtime?.health ?? '-',
-                  resource.runtime?.endpointUrl ?? '-',
-                ].join('\t'),
-              ),
-            ].join('\n')
-      write(runtime, args.json, { ...result, kind: 'resource' in result ? 'flow.resource' : 'flow.resources' }, text)
       return
     }
     case 'rename': {
@@ -171,7 +149,7 @@ export async function flowCommand(client: ControlClient, host: CommandHost, args
     default:
       throw new CliError(
         'cli.invalid-arguments',
-        `Usage: ${runtime.commandPrefix ?? 'oo flow'} <list|create|show|resources|read|search|edit|schema|rename|delete|check|enable|disable|connector|event-source|trigger|run|runs|publish|publications|rollback|workbench>`,
+        `Usage: ${runtime.commandPrefix ?? 'oo flow'} <list|create|show|live|read|search|edit|schema|rename|delete|check|enable|disable|connector|event-source|trigger|run|runs|publish|publications|rollback|workbench>`,
       )
   }
 }

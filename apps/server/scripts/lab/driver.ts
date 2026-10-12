@@ -42,6 +42,22 @@ export function driver(lab: LabSession, transport: 'cli' | 'mcp'): ToolCall {
           case 'connector_connections':
             argv = ['connector', 'connections', String(args.serviceId), '--flow', String(args.flowId), '--json']
             break
+          case 'flow_live':
+            argv = ['live', String(args.flowId), '--json']
+            break
+          case 'flow_publish':
+            argv = [
+              'publish',
+              String(args.flowId),
+              '--expected-revision',
+              String(args.revisionId),
+              '--expected-publication',
+              'none',
+              '--idempotency-key',
+              String(args.idempotencyKey),
+              '--json',
+            ]
+            break
           case 'flow_check':
             argv = ['check', String(args.flowId), '--revision', String(args.revisionId), '--json']
             break

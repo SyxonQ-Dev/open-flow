@@ -116,18 +116,23 @@ async function test(id?: string, keepFailed = false, transport: 'cli' | 'mcp' = 
   const source = await readFile(import.meta.filename)
   let failures = 0
   for (const item of id == null ? scenarios : [scenario(id)]) {
+    if ('transport' in item && item.transport != transport) {
+      if (id != null) throw new Error(`${item.id} supports ${item.transport} only.`)
+      continue
+    }
     const directory = await mkdtemp(path.join(tmpdir(), 'open-flow-lab-'))
     const lab = new LabSession(directory, item.id)
     const attempts: Attempt[] = []
     let passed = false
     try {
       await lab.open()
-      const script = `reference-v1:${createHash('sha256')
+      const scriptIdentity = createHash('sha256')
         .update(source)
         .update(await readFile(path.join(import.meta.dirname, 'scenarios.ts')))
         .update(await readFile(path.join(import.meta.dirname, 'reference.ts')))
         .update(await readFile(path.join(import.meta.dirname, 'fulfillmentReference.ts')))
-        .digest('hex')}`
+      if (item.id == 'webhook-live') scriptIdentity.update(await readFile(path.join(import.meta.dirname, 'liveReference.ts')))
+      const script = `reference-v1:${scriptIdentity.digest('hex')}`
       for (let stage = 0; stage < stageCount(item.id); stage++) {
         lab.attempt.script = script
         attempts.push(lab.attempt)

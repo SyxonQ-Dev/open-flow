@@ -1190,6 +1190,17 @@ export const triggerControlApiConformanceCases: readonly ControlApiConformanceCa
         equal(binding.currentPublicationId, publicationId, 'Trigger Publication')
         equal(binding.operatorState, undefined, 'No individual Trigger control state')
       }
+      const online = await client(harness).getLiveDetails(flowId)
+      equal(online.publication?.publicationId, publicationId, 'Online Publication')
+      equal(
+        online.entries.map((entry) => entry.type),
+        ['cron', 'webhook'],
+        'Online entries',
+      )
+      const onlineWebhook = online.entries.find((entry) => entry.type == 'webhook')
+      if (onlineWebhook?.type != 'webhook') fail('Missing online Webhook.')
+      equal(onlineWebhook.config.method, 'POST', 'Online request method')
+      equal(onlineWebhook.config.body, {}, 'Online request fields')
       const webhookPath = `${base}/webhook`
       const endpointUrl = requiredString(
         record((await json(await request(harness, webhookPath), 200, 'Read Webhook')).binding, 'Webhook').endpointUrl,
@@ -1199,6 +1210,7 @@ export const triggerControlApiConformanceCases: readonly ControlApiConformanceCa
         const response = await request(harness, `${webhookPath}/${action}`, { body: JSON.stringify({ version: 1 }), method: 'POST' })
         equal(response.status, 404, 'Individual Trigger control is unavailable')
       }
+      equal(onlineWebhook.binding.endpointUrl, endpointUrl, 'Online endpoint shares binding authority')
       const enable = (enabled: boolean) =>
         request(harness, `/v1/flows/${flowId}/enabled`, {
           method: 'PUT',

@@ -411,37 +411,43 @@ interface Live {
 }
 ```
 
+### Current online entry details
+
+`GET /v1/flows/:flowId/live/details` returns `LiveDetails`; SDK consumers use
+`ControlClient.getLiveDetails(flowId)`. It uses the same Flow authorization as
+other Flow reads. It reads only the current Publication, its fixed Revision and
+matching active-version bindings, independently of Draft readability or changes.
+It does not call Providers, resolve Variable values, or expand shared resources.
+The existing `/live` response and Draft change comparison are unchanged.
+
+```ts
+type LiveDetails = { flowId: string; version: 1 } & (
+  | { publication: null; status: 'not-published'; entries: [] }
+  | { publication: Publication; status: 'runnable' | 'suspended'; enabled: boolean; entries: LiveEntry[] }
+)
+```
+
+Each entry contains `nodeId`, `name`, optional `description`, `type`, and `config`
+using the existing authoring business configuration. Webhook `config` includes
+`method`, named `body` fields (schema, nullable, optional default/description) and
+optional response `options`. Methods without bodies return `body: {}` even if
+unused field definitions remain stored. Cron includes schedules; Error includes
+source Flow IDs. Poll and Integration additionally expose `provider` and `inputs`
+as their fixed configuration assignments, preserving explicit value/unset and
+omission. Their config includes the key, optional connection, and Poll schedule.
+Event Source IDs remain business configuration references.
+
+Automatic entries include `binding: TriggerBinding`, including the server-produced
+Webhook `endpointUrl`. Binding Flow, node, kind, Publication and Revision identities
+must match the entry and view. Retired bindings are excluded; Manual entries have
+no binding. Entries are ordered by node ID. Flow enablement, subscription health and listener health remain independent facts. This is a current
+read view, not a historical resource snapshot or a guarantee of future availability.
+
 Publish bodies use `{ engineContract, expectedLivePublicationId, version: 1 }`. Acceptance and idempotent replay both return `202` with the same `PublishOperation`. Query status through `GET /v1/flows/{flowId}/publish-operations/{operationId}`. Pending operations create no Publication and do not move Live. After success, use `publicationId` to read Publication and Live. Failure returns only a safe issue.
 
 Pending operations prepare new Integration subscriptions and baselines for new or changed Polls. Baseline events do not create Runs. The final checkpoint installs only on activation. Completely unchanged, healthy Integration/Poll runtime state may be reused. If an existing Integration cannot support safe staged replacement, Publish returns `publication.unsupported` before creating an operation. Old Live and its subscription remain unchanged.
 
 Rollback bodies use `{ expectedLivePublicationId, version: 1 }` with Live CAS. First submission returns `201`; idempotent replay returns `200`. Rollback creates a new Publication with `sourcePublicationId`, preserving history and Draft head. First Publish or Rollback must verify all Variables used by the pinned closure inside the authoritative Publication-creation transaction. Missing Variables return `binding.unresolved`. Idempotent replay returns the original Publication before checking later Variable deletion.
-
-### Published resources
-
-- `GET /v1/flows/:flowId/resources?publicationId=...`
-- `GET /v1/flows/:flowId/resources/:resourceId?publicationId=...`
-
-`publicationId` is optional and defaults to the current Live. It must belong to the requested Flow.
-A Flow with no Live returns `live.not-found`; an unknown publication returns `publication.not-found`;
-a resource absent from the selected publication returns `resource.not-found`. A successful publication
-with no managed Trigger resources returns an empty list.
-
-Both responses include `flowId`, `publicationId`, `revisionId`, `status: "live" | "historical"`, and
-`version: 1`. Live responses additionally include `enabled`, the single switch controlling all Trigger admission. The list has `resources`; the detail has `resource`.
-
-Each resource has `resourceId` (the node ID), `kind: "trigger"`, `type` (`webhook`, `cron`, `poll`,
-`integration`, or `error`), `name`, optional `description`, and business `config` and `inputs` in the
-same form as authoring node reads. Manual Triggers have no managed binding and are not listed.
-Configuration always comes from the selected publication's fixed Revision, never the current Draft.
-Only resources in the current Live may contain `runtime: TriggerBinding`, restricted to bindings of
-that publication. Webhook runtime details include `endpointUrl` using the request origin.
-
-Historical publications omit `runtime` and `enabled`. They do not reconstruct historical health or
-expose current endpoints. Explicitly selecting the current Live still includes its current runtime.
-Candidate and retired bindings are excluded. Rollback creates a new publication; the original
-publication stays historical. Pin the returned `publicationId` on later reads when version consistency
-matters. Resource configuration is a projection of existing publication data, with no separate storage.
 
 ### Publication presentation
 

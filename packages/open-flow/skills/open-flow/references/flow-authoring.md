@@ -28,6 +28,7 @@ supplies the edit operations. Use these when a configuration is unfamiliar.
 <!-- agentic:var flowCommand --> list --json
 <!-- agentic:var flowCommand --> create "Order summary" --json
 <!-- agentic:var flowCommand --> show FLOW_ID --json
+<!-- agentic:var flowCommand --> live FLOW_ID --json
 <!-- agentic:var flowCommand --> read FLOW_ID --json
 <!-- agentic:var flowCommand --> search FLOW_ID --input '{"query":"Customer summary","type":"agent"}' --json
 <!-- agentic:var flowCommand --> read FLOW_ID --input '{"revision":"REVISION","nodes":["NODE"]}' --json
@@ -35,7 +36,10 @@ supplies the edit operations. Use these when a configuration is unfamiliar.
 ```
 
 A known Flow ID avoids a list lookup. `show` gives lifecycle and publication
-state. `read` gives a graph outline, selected node details, or a text excerpt;
+state. `live` gives the current published version, enablement, and online entries,
+including Webhook URLs and request fields. `resourceReferences.draft` in Flow
+metadata describes Draft dependencies, not online resources. `read` defaults to
+the Draft and gives a graph outline, selected node details, or a text excerpt;
 `nodes` and `text` are alternative modes. `search` finds matches in names,
 configuration and source text, optionally restricted by node type.
 
@@ -342,33 +346,27 @@ Use the observed Live publication ID for `--expected-publication`; if it changed
 read the current state before deciding whether to apply the switch to that version.
 The MCP equivalent is `flow_set_enabled({ flowId, expectedPublicationId, enabled })`.
 
+Successful `publish` includes the same `live` details as `live FLOW_ID --json`;
+use that result without immediately querying again. Query `live` after waiting
+for an asynchronous publication, when details are missing, or when current state
+is needed later. An unpublished Flow returns `status: not-published` with no entries.
+
+For an authorized Webhook call, use the entry's `binding.endpointUrl`,
+`config.method`, and `config.body` field contracts. These retain schema,
+nullable and default semantics; methods without a request body have no body
+fields. Do not reconstruct URLs from node IDs. Flow `enabled` and `status` are
+independent of a binding's `health` and `listener`; a healthy
+subscription alone does not establish that automatic execution is enabled.
+Shared event source and account references can be inspected through their own
+commands when relevant.
+
 `workbench` returns a URL; `open` opens the system browser. Browser authentication
 belongs to the host. An open Workbench receives Revision notifications, so a CLI
 edit does not require a page reload.
 
-### Inspect published resources
-
-```bash
-<!-- agentic:var flowCommand --> resources FLOW_ID --json
-<!-- agentic:var flowCommand --> resources FLOW_ID RESOURCE_ID --json
-<!-- agentic:var flowCommand --> publications list FLOW_ID --json
-<!-- agentic:var flowCommand --> resources FLOW_ID --publication PUBLICATION_ID --json
-```
-
-`resources` defaults to the current Live publication and returns its managed
-Trigger resources, runtime health and Webhook URLs. The response's `enabled`
-describes the Flow switch; healthy resources can belong to a disabled Flow.
-Use a returned `resourceId` for detail, and pin `publicationId` when subsequent
-reads must refer to the same publication. Configuration comes from the fixed
-published Revision, so unpublished Draft edits do not appear here.
-
-Historical results contain configuration only, without runtime state, `enabled`
-or callable URLs. Querying history does not reactivate it; restoring a historical
-version requires an authorized rollback. Manual entry nodes are read through
-`read` and are not managed resources. `trigger search` and `trigger show` discover
-provider Trigger definitions; use `resources` to inspect a Flow's published Triggers.
-MCP equivalents are `flow_resources({ flowId, publicationId? })` and
-`flow_resource_get({ flowId, resourceId, publicationId? })`.
+`live` includes Manual entry nodes without a runtime binding. `trigger search`
+and `trigger show` discover provider definitions; `live` inspects the Flow's
+current online entries. The MCP equivalent is `flow_live({ flowId })`.
 
 ## Recover without losing another change or repeating an effect
 
@@ -380,6 +378,12 @@ MCP equivalents are `flow_resources({ flowId, publicationId? })` and
   resolve that uncertainty; a new key describes a new mutation.
 - **Saved with diagnostics:** the edit happened. Repair the saved Revision or
   investigate unavailable validation; resubmitting it is not a validation step.
+- **Published with detail warnings:** a succeeded `operation` confirms the
+  publication even if metadata or online details could not be read. Query `live`
+  rather than publishing again to retrieve an address. A pending operation still
+  requires observing that same operation. If `live.publication.publicationId`
+  differs from the successful operation's `publicationId`, the entries describe
+  the current Live version, not the earlier publication.
 - **Failed Run:** events and results identify the failing node and available
   inputs. Consider already-completed external effects before running it again.
 

@@ -56,11 +56,13 @@ it('keeps retained Trigger activity history readable and paginated after removin
   await expect(control.listFlowTriggerActivities(flow.flowId, 'other', { cursor: first.nextCursor })).rejects.toMatchObject({ code: 'page.invalid-cursor' })
 })
 
-it('queries current and historical publication resources through REST and MCP without mixing runtime generations', async () => {
+it('shares current online details between REST and MCP without exposing historical resource tools', async () => {
   const { call, control, service, client, app, origin } = await fixture()
-  const flow = await control.createFlow('Published resources')
+  const flow = await control.createFlow('Online entries')
   const flowId = flow.flowId
-  await expect(control.listPublicationResources(flowId)).rejects.toMatchObject({ code: 'live.not-found' })
+  const empty = await control.getLiveDetails(flowId)
+  expect(empty).toMatchObject({ publication: null, status: 'not-published', entries: [] })
+  expect(await call('flow_live', { flowId })).toEqual(empty)
   const created = await control.changeDraft(
     flowId,
     flow.draftRevisionId,
@@ -74,75 +76,48 @@ it('queries current and historical publication resources through REST and MCP wi
   await service.tickMaintenance()
   const first = await control.getPublishOperation(flowId, firstOperation.operationId)
   if (first.status != 'succeeded') throw new Error(JSON.stringify(first))
-  const initial = await control.listPublicationResources(flowId)
-  expect(initial).toMatchObject({ publicationId: first.publicationId, revisionId: created.revision.revisionId, status: 'live', enabled: true })
-  expect(initial.resources.map(({ resourceId }) => resourceId).toSorted()).toEqual(['hook', 'schedule'])
-  const hook = initial.resources.find(({ resourceId }) => resourceId == 'hook')!
-  expect(hook).toMatchObject({
-    name: 'Incoming',
-    config: { method: 'POST', body: {} },
-    runtime: { currentPublicationId: first.publicationId, health: 'healthy' },
+  const initial = await control.getLiveDetails(flowId)
+  expect(initial).toMatchObject({
+    publication: { publicationId: first.publicationId, revisionId: created.revision.revisionId },
+    status: 'runnable',
+    enabled: true,
   })
-  expect(hook.runtime?.endpointUrl).toMatch(new RegExp(`^${origin}/v1/webhooks/`))
-  expect(await call('flow_resources', { flowId })).toEqual(initial)
-  expect(await call('flow_resource_get', { flowId, resourceId: 'hook', publicationId: first.publicationId })).toEqual(
-    await control.getPublicationResource(flowId, 'hook', first.publicationId),
-  )
+  expect(initial.entries.map(({ nodeId }) => nodeId)).toEqual(['hook', 'schedule', 'start'])
+  const hook = initial.entries.find((entry) => entry.type == 'webhook')!
+  if (hook.type != 'webhook') throw new Error('Missing Webhook')
+  expect(hook.binding.endpointUrl).toMatch(new RegExp(`^${origin}/v1/webhooks/`))
+  expect(await call('flow_live', { flowId })).toEqual(initial)
   await control.setFlowEnabled(flowId, first.publicationId, false)
-  expect(await call('flow_resources', { flowId })).toMatchObject({
-    enabled: false,
-  })
-
+  expect(await call('flow_live', { flowId })).toMatchObject({ enabled: false, status: 'suspended' })
   const changed = await control.editAuthoring(flowId, {
     baseRevision: created.revision.revisionId,
-    requestId: 'replace-resources',
+    requestId: 'replace-entries',
     edits: [
       { op: 'node.remove', node: 'schedule' },
       { op: 'node.update', node: 'hook', set: { name: 'Replacement', config: { method: 'GET' } } },
     ],
   })
-  expect((await control.getPublicationResource(flowId, 'hook')).resource.config).toMatchObject({ method: 'POST' })
+  expect((await control.getLiveDetails(flowId)).entries.find((entry) => entry.nodeId == 'hook')).toMatchObject({ config: { method: 'POST' } })
   const secondOperation = await control.publishFlow(flowId, changed.revision, first.publicationId)
   await service.tickMaintenance()
   const second = await control.getPublishOperation(flowId, secondOperation.operationId)
   if (second.status != 'succeeded') throw new Error(JSON.stringify(second))
-  const current = await control.listPublicationResources(flowId)
-  expect(current.resources).toHaveLength(1)
-  expect(current.resources[0]).toMatchObject({ name: 'Replacement', config: { method: 'GET' }, runtime: { currentPublicationId: second.publicationId } })
-  const historical = await control.listPublicationResources(flowId, first.publicationId)
-  expect(historical).toMatchObject({
-    status: 'historical',
-    publicationId: first.publicationId,
-    resources: expect.arrayContaining([expect.objectContaining({ name: 'Incoming', config: expect.objectContaining({ method: 'POST' }) })]),
-  })
-  expect(historical).not.toHaveProperty('enabled')
-  expect(historical.resources).toHaveLength(2)
-  for (const resource of historical.resources) expect(resource).not.toHaveProperty('runtime')
-  expect(await call('flow_resources', { flowId, publicationId: first.publicationId })).toEqual(historical)
-  expect(await call('flow_resource_get', { flowId, resourceId: 'schedule', publicationId: first.publicationId })).toEqual(
-    await control.getPublicationResource(flowId, 'schedule', first.publicationId),
-  )
-  await expect(control.getPublicationResource(flowId, 'schedule')).rejects.toMatchObject({ code: 'resource.not-found' })
-  await expect(control.listPublicationResources(flowId, 'missing')).rejects.toMatchObject({ code: 'publication.not-found' })
-  expect((await client.callTool({ name: 'flow_resource_get', arguments: { flowId, resourceId: 'missing' } })).structuredContent).toMatchObject({
-    error: { code: 'resource.not-found' },
-  })
-  const other = await control.createFlow('Other owner of resources')
-  await expect(control.listPublicationResources(other.flowId, first.publicationId)).rejects.toMatchObject({ code: 'publication.not-found' })
-  expect(
-    (await client.callTool({ name: 'flow_resources', arguments: { flowId: other.flowId, publicationId: first.publicationId } })).structuredContent,
-  ).toMatchObject({ error: { code: 'publication.not-found' } })
-  const headers = { authorization: `Bearer ${token}` }
-  expect((await app.request(`/v1/flows/${flowId}/resources?publicationId=`, { headers })).status).toBe(400)
-  expect((await app.request(`/v1/flows/${flowId}/resources?unknown=1`, { headers })).status).toBe(400)
-
+  const current = await control.getLiveDetails(flowId)
+  expect(current.entries.map((entry) => entry.nodeId)).toEqual(['hook', 'start'])
+  expect(current.entries[0]).toMatchObject({ name: 'Replacement', config: { method: 'GET' }, binding: { currentPublicationId: second.publicationId } })
   const rolledBack = await control.rollbackFlow(flowId, first.publicationId, second.publicationId)
-  expect(await control.listPublicationResources(flowId)).toMatchObject({
-    publicationId: rolledBack.publicationId,
-    status: 'live',
-    resources: expect.arrayContaining([expect.objectContaining({ name: 'Incoming' }), expect.objectContaining({ resourceId: 'schedule' })]),
+  expect(await call('flow_live', { flowId })).toMatchObject({
+    publication: { publicationId: rolledBack.publicationId },
+    entries: expect.arrayContaining([expect.objectContaining({ name: 'Incoming' }), expect.objectContaining({ nodeId: 'schedule' })]),
   })
-  expect((await control.listPublicationResources(flowId, first.publicationId)).status).toBe('historical')
+  const tools = await client.listTools()
+  expect(tools.tools.map((tool) => tool.name)).toContain('flow_live')
+  expect(tools.tools.map((tool) => tool.name)).not.toContain('flow_resources')
+  expect(tools.tools.map((tool) => tool.name)).not.toContain('flow_resource_get')
+  const headers = { authorization: `Bearer ${token}` }
+  expect((await app.request(`/v1/flows/${flowId}/live/details?publicationId=${first.publicationId}`, { headers })).status).toBe(400)
+  expect((await client.callTool({ name: 'flow_live', arguments: { flowId, publicationId: first.publicationId } })).isError).toBe(true)
+  for (const suffix of ['/resources', '/resources/hook']) expect((await app.request(`/v1/flows/${flowId}${suffix}`, { headers })).status).toBe(404)
 })
 
 it('discovers independent Feishu event sources without exposing secrets', async () => {

@@ -44,7 +44,7 @@ export async function runLabCli(args: string[], options: LabCliOptions): Promise
         ? 'check'
         : args[0] == 'run' || (args[0] == 'runs' && ['cancel', 'resolve'].includes(args[1] ?? ''))
           ? 'execute'
-          : ['read', 'search', 'list', 'show', 'inspect', 'schema', 'runs'].includes(args[0] ?? '') ||
+          : ['read', 'search', 'list', 'show', 'live', 'inspect', 'schema', 'runs'].includes(args[0] ?? '') ||
               args.includes('--help') ||
               ['show', 'search', 'providers', 'connections', 'teams', 'list'].includes(args[1] ?? '')
             ? 'read'

@@ -18,7 +18,7 @@ export const mcpInstructions =
   'Use flow_list, flow_read and flow_search to inspect root workflows. Read node type schemas with flow_schema. Use flow_edit with the observed baseRevision and a stable requestId. Node edits affect only the selected node. Text edits require exactly one match. Execution edges and input sources are independent. Legacy Subflow content is unsupported. Edits can save incomplete drafts; inspect returned diagnostics and use flow_check before running. ' +
   'Use flow_check before flow_run. Select an explicit Trigger node ID and fixed revision or publication. A new Flow has no Trigger until you add one. ' +
   'Before adding a Feishu Trigger, use event_source_list and compare its Connection IDs with connector_connections in the Flow scope. If no source is available, create and verify one in Workbench. ' +
-  'Use flow_publish to publish a fixed Revision, then poll flow_publish_status until succeeded or failed. Use flow_set_enabled to enable or disable the observed Live publication. ' +
+  'Use flow_publish to publish a fixed Revision, then poll flow_publish_status until succeeded or failed. Use flow_live to inspect current online entries after publication. Use flow_set_enabled to enable or disable the observed Live publication. ' +
   'flow_run returns an accepted Run, not its final result. Find Runs with run_list, poll run_get and use run_result after terminal. Resolve a waiting Run only with an explicit run_resolve_wait action allowed by run_get. ' +
   'Use run_results and run_result_read to inspect stored Agent tool results; these are separate from the terminal Run result. ' +
   'Retry flow_edit with identical arguments and the same requestId. Retry flow_create, flow_publish and flow_run only with identical arguments and the same idempotencyKey; a new key can execute the Flow again. Other mutations use the same resource identity and arguments when retrying. Cancel a Run explicitly with run_cancel. ' +
@@ -48,14 +48,9 @@ function tool<Args>(description: string, schema: z.ZodType<Args>, readOnly: bool
 }
 
 export const mcpTools = {
-  flow_resources: tool(
-    'List published resources, currently non-Manual Triggers. Defaults to current Live; supply publicationId for a fixed publication. Historical publications return configuration only. Live resources include current runtime state and Webhook URLs.',
-    z.strictObject({ flowId: flow, publicationId: id.optional() }),
-    true,
-  ),
-  flow_resource_get: tool(
-    'Read a published resource by resourceId from flow_resources. Defaults to current Live; supply publicationId to keep the publication fixed. Historical resources have no current runtime state or callable URL.',
-    z.strictObject({ flowId: flow, resourceId: id, publicationId: id.optional() }),
+  flow_live: tool(
+    'Read the current published Flow, enablement and online entries, including Webhook URLs and request fields. Draft changes do not affect this view. An unpublished Flow returns not-published with no entries.',
+    z.strictObject({ flowId: flow }),
     true,
   ),
   flow_list: tool(

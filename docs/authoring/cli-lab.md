@@ -189,6 +189,7 @@ maintain the workflow without that program.
 ```bash
 bun run lab test
 bun run lab test --mcp
+bun run lab test webhook-live
 bun run lab test repair-amount
 bun run lab test customer-redaction --keep-failed
 ```
@@ -198,6 +199,7 @@ fulfillment workflow:
 
 | Scenario                   | Task and independent acceptance                                                                                                                                                                                                                           |
 | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `webhook-live`             | CLI-only: publish a POST Webhook, discover its URL and request fields, edit the Draft to PUT, and verify the live callback still executes the published contract.                                                                                         |
 | `order-alert`              | Build from an empty flow. Discover order and notification Actions and test accounts among decoys. Run empty, below, equal and above-threshold orders; verify branch choice, call counts, content and accounts.                                            |
 | `customer-redaction`       | Insert a processing step into the customer notification execution path and bind its data. Verify only order ID and total leave the customer path; the internal archive retains the complete original record and account.                                  |
 | `specialize-summary`       | Two Agent nodes start with identical, independently owned configurations. Change one exact rule only in the customer prompt; verify the internal prompt, other configuration and actual customer/internal model requests.                                 |
@@ -206,7 +208,9 @@ fulfillment workflow:
 | `concurrent-edit`          | After the first read containing the notification target, a deterministic gate commits an operator note edit. Require a stale write rejection with an unchanged Draft, a successful retry preserving the note, and no duplicate nodes or unnecessary Runs. |
 | `fulfillment-ops`          | Maintain one Flow across four accepted tasks: batch reporting, overdue alerts, manager/supplier follow-up and an upstream data migration. Each stage retains the previous Flow and checks cumulative behavior.                                            |
 
-Both drivers use the same task, fixture and verifier. Reference scripts call only public Agent tools
+Both drivers use the same task, fixture and verifier for shared scenarios.
+`webhook-live` exercises the CLI online-entry command and is excluded from the MCP
+suite; explicitly requesting it with `--mcp` reports that it is CLI-only. Reference scripts call only public Agent tools
 through `driver.ts`. They cannot read fixture data, the database or the service to obtain answers.
 CLI calls use production argument/file handling. MCP calls use the real HTTP transport.
 

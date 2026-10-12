@@ -6,6 +6,14 @@ import { fulfillmentSamples, fulfillmentStages } from './fulfillment.ts'
 
 export const scenarios = [
   {
+    id: 'webhook-live',
+    transport: 'cli',
+    entry: { kind: 'webhook' },
+    name: 'Publish and discover a Webhook entry',
+    version: 1,
+    task: 'Create a POST Webhook named Published hook with a required string message field and a code node returning that message. Publish it, inspect its online URL and request contract, then change only the Draft hook to PUT and name it Draft hook. Confirm the online entry still describes the published POST contract. Leave the published workflow enabled for acceptance verification.',
+  },
+  {
     id: 'fulfillment-ops',
     entry: { kind: 'manual' },
     name: 'Evolve a fulfillment operations workflow',
@@ -105,7 +113,7 @@ function source(nodeId: string, handle: string, from: string, output: string): C
   return { kind: 'graph.node.input.set', nodeId, handle, value: { kind: 'sources', sources: [{ kind: 'node', nodeId: from, output }] } }
 }
 export function initialOperations(id: string): ChangeOperation[] {
-  if (id == 'order-alert' || id == 'fulfillment-ops') return []
+  if (id == 'order-alert' || id == 'fulfillment-ops' || id == 'webhook-live') return []
   const start = node('start', { kind: 'manual', name: 'Manual trigger' })
   if (id.startsWith('specialize-summary')) {
     const task: ManagedTaskDefinition = {
@@ -315,7 +323,7 @@ function effectiveNode(content: RevisionContent, id: string): unknown {
 }
 /** Independent assertions: compare behavior and preserved effective configurations, not generated IDs. */
 export function assertions(id: string, base: RevisionContent, current: RevisionContent): string[] {
-  if (id == 'fulfillment-ops') return []
+  if (id == 'fulfillment-ops' || id == 'webhook-live') return []
   const errors: string[] = []
   const allowed = new Set(
     id.startsWith('specialize-summary') ? ['customer'] : id == 'customer-redaction' ? ['notify'] : id == 'repair-amount' ? ['format'] : ['notify', 'notes'],

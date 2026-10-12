@@ -348,9 +348,10 @@ async function verifyConsumer(): Promise<void> {
     await writeFile(
       consumerPath,
       [
-        "import type { ConnectorAction, ControlErrorCode, ControlClient, PublicationResources, PublicationResourceDetail } from '@oomol-lab/open-flow/control-api'",
-        'export const readResources = (client: ControlClient): Promise<PublicationResources> => client.listPublicationResources("flow", "publication")',
-        'export const readResource = (client: ControlClient): Promise<PublicationResourceDetail> => client.getPublicationResource("flow", "hook", "publication")',
+        "import type { ConnectorAction, ControlErrorCode } from '@oomol-lab/open-flow/control-api'",
+        "import { ControlClient, liveEntries, type LiveDetails, type LiveEntry } from '@oomol-lab/open-flow/control-api'",
+        "const details: Promise<LiveDetails> = new ControlClient(async () => Response.json({})).getLiveDetails('flow'); void details",
+        'const projectEntries: readonly LiveEntry[] = liveEntries({} as never, {} as never, []); void projectEntries',
         "import type { DecisionExecutor } from '@oomol-lab/open-flow/decision'",
         "export const decisionKind: DecisionExecutor['kind'] = 'decision'",
         "import type { OpenApiExecutor } from '@oomol-lab/open-flow/openapi'",
@@ -522,6 +523,7 @@ const host: OpenFlowCommandHost = {
   cloudRequest: async (path, _init) => {
     if (path === '/v1/flows?limit=100') return Response.json({ flows: [], version: 1 })
     if (path === '/v1/flows/flow-1') return Response.json(${JSON.stringify(flow())})
+    if (path === '/v1/flows/flow-1/live/details') return Response.json({ flowId: 'flow-1', publication: null, status: 'not-published', entries: [], version: 1 })
     throw new Error('Unexpected request: ' + path)
   },
   getWorkbenchUrl: async (flowId) => 'https://example.test/flows/' + flowId,
@@ -530,6 +532,7 @@ const result: Promise<number> = runOpenFlowCommand(['--version', '--json'], host
 await result
 await runOpenFlowCommand(['list', '--json'], host)
 await runOpenFlowCommand(['workbench', 'flow-1', '--json'], host)
+await runOpenFlowCommand(['live', 'flow-1', '--json'], host)
 if (false) {
   // @ts-expect-error Host requests must return a Response.
   runOpenFlowCommand([], { cloudRequest: async () => 'invalid' })
@@ -549,6 +552,11 @@ if (false) {
   assert.deepEqual(outputs[0], { version })
   assert.deepEqual(outputs[1], { flows: [], kind: 'flow.list', version: 1 })
   assert.equal(outputs[2].url, 'https://example.test/flows/flow-1')
+  assert.deepEqual(outputs[3], {
+    kind: 'flow.live',
+    live: { flowId: 'flow-1', publication: null, status: 'not-published', entries: [], version: 1 },
+    version: 1,
+  })
   await execFileAsync(process.execPath, ['build', 'consumer.ts', '--target=bun', '--outfile=host.js'], { cwd: consumer })
   await execFileAsync(process.execPath, ['build', 'consumer.ts', '--compile', '--outfile=host'], { cwd: consumer })
   await rm(path.join(consumer, 'node_modules'), { recursive: true, force: true })

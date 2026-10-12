@@ -118,24 +118,26 @@ When a pending decision is detected, wait commands return the Run detail’s `wa
 
 `publish` waits until the publication operation completes or times out. A timeout result retains `flowId` and `operation.operationId`. Query it with `publications operation FLOW_ID OPERATION_ID`, or continue waiting with `publications wait FLOW_ID OPERATION_ID --timeout 60000`.
 
-### Published resources
+### Online entries
 
-`resources FLOW_ID [RESOURCE_ID] [--publication PUBLICATION_ID] [--json]` reads resources
-from the current Live publication by default. Supply a resource ID from the list for its detail,
-or `--publication` to select a fixed publication. Use `publications list FLOW_ID` to find historical IDs.
+`live FLOW_ID_OR_NAME [--json]` returns the current Publication, Flow enablement,
+and all online entries, including Manual and Webhook request fields. JSON is
+`{ kind: 'flow.live', live: LiveDetails, version: 1 }`. An unpublished Flow returns
+`status: 'not-published'` with no entries and exit code 0. Flow lists remain summaries.
+The command accepts neither a node selector nor a historical publication.
 
-JSON results have `kind: "flow.resources"` with `resources`, or `kind: "flow.resource"` with
-`resource`. Both include `flowId`, `publicationId`, `revisionId`, `status` (`live` or `historical`),
-and `version: 1`. Live results also include the Flow's `enabled` flag. Each resource includes
-`resourceId`, `kind`, `type`, `name`, optional `description`, business `config` and `inputs`.
-Current resources may include `runtime` with Trigger health and a Webhook `endpointUrl`.
-Use `enable` / `disable` on the Flow to control all of its Triggers together.
+After successful publication, `publish` adds the succeeded `operation` and the
+same `live` view. When Live still refers to that operation's Publication, it reuses
+the returned metadata. Only a failed Live read or a different current version
+requires a separate lookup of the successful Publication.
 
-The first resource kind is `trigger`, with types `webhook`, `cron`, `poll`, `integration`, and
-`error`. Resource IDs are the corresponding node IDs. Manual entry nodes have no runtime binding
-and are not listed. Historical results contain fixed configuration only, with no `runtime`,
-current health, or callable URL. Selecting a publication that is still Live returns its current state.
-An unpublished Flow returns `live.not-found`; a missing resource returns `resource.not-found`.
+If a detail read fails, the corresponding field is omitted and `warnings` contains
+`{ code, message }`. Publication success and exit code 0 are preserved. Codes are
+`live.details-read-failed`, `publication.read-failed`, and `live.publication-changed`.
+The last keeps both version identities: entries describe the observed current Live,
+which may differ after concurrent publication or an idempotent replay. Query `live`
+to recover details; do not publish again merely to obtain an address. Pending and
+failed publications do not attach Live. Other publication commands keep their existing output.
 
 ### Result pagination
 

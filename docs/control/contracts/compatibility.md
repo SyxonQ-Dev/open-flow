@@ -103,7 +103,7 @@ This prerelease has two CLI JSON breaks: `trigger search` renames `definitions` 
 ## Flow-wide Trigger control
 
 Individual Trigger pause/resume routes, client methods and the `TriggerBinding.operatorState`
-field are removed. Use Flow enable/disable with the observed Live publication ID. Resource and
+field are removed. Use Flow enable/disable with the observed Live publication ID. Live details and
 Trigger queries retain configuration, runtime health, endpoints and activity history.
 
 Migration 0046 disables a Flow if any binding in its current Live publication was individually

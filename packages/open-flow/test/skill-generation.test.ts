@@ -1,3 +1,4 @@
+import { render } from 'agentic-markdown'
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
@@ -24,5 +25,17 @@ it('generates a self-contained local skill and removes obsolete output without t
     expect(entry).not.toContain('agentic:')
   } finally {
     await rm(directory, { recursive: true, force: true })
+  }
+})
+
+it('renders the shipped skill for the oo host with resolvable references', async () => {
+  const root = path.resolve(import.meta.dirname, '../skills/open-flow')
+  const entry = render(await readFile(path.join(root, 'SKILL.md'), 'utf8'), { flowCommand: 'oo flow' })
+  expect(entry).toContain('oo flow')
+  expect(entry).not.toContain('agentic:')
+  for (const [, reference] of entry.matchAll(/\]\((references\/[^)]+)\)/g)) {
+    const content = render(await readFile(path.join(root, reference!), 'utf8'), { flowCommand: 'oo flow' })
+    expect(content).not.toContain('agentic:')
+    expect(content).toContain('oo flow')
   }
 })

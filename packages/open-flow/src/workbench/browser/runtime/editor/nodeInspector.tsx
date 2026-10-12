@@ -13,6 +13,7 @@ import type { WorkspaceStore } from '../stores/workspaceStore.ts'
 import type { DiagnosticFocus } from './diagnostics.ts'
 import type { NodeInputField } from './nodeInputs.tsx'
 import type { InputVariables, NodeInputUpstreamSources } from './sourceValueEditor.tsx'
+import type { WebhookDeploymentProps } from './webhookDeployment.tsx'
 
 import { useEffect, useRef } from 'react'
 import { useTranslate } from 'val-i18n-react'
@@ -48,6 +49,7 @@ import { ResolutionDefinition } from './resolutionDefinition.tsx'
 import { TriggerConfigEditor } from './triggerConfigEditor.tsx'
 import { TriggerScheduleEditor } from './triggerScheduleEditor.tsx'
 import { TriggerSummary } from './triggerSummary.tsx'
+import { WebhookDeployment } from './webhookDeployment.tsx'
 import { WebhookEditor } from './webhookEditor.tsx'
 
 export function inspectorIcon(node: ResolvedSelection | undefined): IconName {
@@ -176,6 +178,7 @@ function inputUpstreamSources({
 }
 
 interface Props {
+  readonly webhookDeployment?: WebhookDeploymentProps
   readonly readOnly?: boolean
   readonly variables?: InputVariables
   readonly connectorAction?: ConnectorAction
@@ -224,6 +227,7 @@ type InspectorProps = Props &
   )
 
 export function NodeInspector({
+  webhookDeployment,
   variables = { enabled: false, loaded: false, loading: false, names: [], onOpen: undefined },
   readOnly = false,
   connectorAction,
@@ -291,6 +295,9 @@ export function NodeInspector({
   const panel = (
     <ScrollArea className="inspector-scroll" tabIndex={-1}>
       <div className="inspector-content" ref={content}>
+        {selection?.kind === 'trigger' && selection.trigger.kind === 'webhook' && webhookDeployment != null && (
+          <WebhookDeployment key={selection.id} {...webhookDeployment} />
+        )}
         {readOnly && connector != null && <SavedConnectionReference action={connector.action} connectionId={connector.connectionId} />}
         {readOnly && selection?.kind === 'trigger' && (selection.trigger.kind === 'poll' || selection.trigger.kind === 'integration') && (
           <SavedConnectionReference action={selection.trigger.definition.key} connectionId={selection.trigger.connectionId} />

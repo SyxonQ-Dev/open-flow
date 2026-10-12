@@ -10,24 +10,8 @@ import { useLang, useTranslate } from 'val-i18n-react'
 import { Button } from '../../../../ui/browser/button.tsx'
 import { Dialog, DialogContent, DialogTitle } from '../../../../ui/browser/dialog.tsx'
 import { collapseAllNested, JSONViewer } from '../../../../ui/browser/json-viewer/index.ts'
-
-function triggerLabel(binding: TriggerBinding, enabled: boolean, t: TFunction): string {
-  if (binding.currentPublicationId == null) return t('publication.retired')
-  if (!enabled) return t('publication.suspended')
-  if (binding.listener?.health == 'healthy' && (binding.health == 'failed' || binding.health == 'needs_reauth')) return t('publication.listenerDegraded')
-  switch (binding.listener?.health == 'failed' || binding.listener?.health == 'needs_reauth' ? binding.listener.health : binding.health) {
-    case 'healthy':
-      return t('publication.active')
-    case 'failed':
-      return t('publication.failed')
-    case 'needs_reauth':
-      return t('publication.needsReauth')
-    case 'initializing':
-      return t('publication.reconciling')
-    case 'suspended':
-      return t('publication.suspended')
-  }
-}
+import { ListenerHealth, TriggerStatus, triggerClass, triggerLabel } from './triggerStatus.tsx'
+import { WebhookEndpoint } from './webhookEndpoint.tsx'
 
 function activityLabel(kind: TriggerActivityKind, t: TFunction): string {
   switch (kind) {
@@ -53,44 +37,6 @@ function triggerName(binding: TriggerBinding, revision: RevisionView | undefined
   return revision.trigger(binding.triggerNodeId)?.name ?? binding.triggerNodeId
 }
 
-function triggerClass(binding: TriggerBinding, enabled: boolean): string {
-  if (binding.currentPublicationId == null || !enabled) return 'neutral'
-  if (binding.listener?.health == 'healthy' && (binding.health == 'failed' || binding.health == 'needs_reauth')) return 'running'
-  switch (binding.listener?.health == 'failed' || binding.listener?.health == 'needs_reauth' ? binding.listener.health : binding.health) {
-    case 'healthy':
-      return 'success'
-    case 'failed':
-    case 'needs_reauth':
-      return 'danger'
-    case 'initializing':
-      return 'running'
-    case 'suspended':
-      return 'neutral'
-  }
-}
-
-export function TriggerStatus({ binding, enabled }: { readonly binding: TriggerBinding; readonly enabled: boolean }) {
-  const t = useTranslate()
-  return <span className={'trigger-binding-state ' + triggerClass(binding, enabled)}>{triggerLabel(binding, enabled, t)}</span>
-}
-
-export function ListenerHealth({ binding, enabled }: { readonly binding: TriggerBinding; readonly enabled: boolean }) {
-  const t = useTranslate()
-  if (binding.listener == null || binding.currentPublicationId == null || !enabled) return null
-  return (
-    <p className="trigger-recovery">
-      {t(
-        binding.listener.health == 'healthy'
-          ? 'publication.listenerScanning'
-          : binding.listener.health == 'needs_reauth'
-            ? 'publication.needsReauthDescription'
-            : 'publication.listenerScanFailed',
-      )}
-      {binding.listener.lastErrorCode == null ? '' : ` (${binding.listener.lastErrorCode})`}
-    </p>
-  )
-}
-
 export function LiveTriggers({ store }: { readonly store: WorkbenchStore }): ReactElement {
   const language = useLang()
   const t = useTranslate()
@@ -99,7 +45,7 @@ export function LiveTriggers({ store }: { readonly store: WorkbenchStore }): Rea
   const activitiesLoading = useVal(store.publications.$.activitiesLoading)
   const activitiesLoadingMore = useVal(store.publications.$.activitiesLoadingMore)
   const activitiesNextCursor = useVal(store.publications.$.activitiesNextCursor)
-  const bindings = useVal(store.publications.$.bindings)
+  const { bindings } = useVal(store.publications.$.bindings)
   const detail = useVal(store.publications.$.detail)
   const detailLoading = useVal(store.publications.$.detailLoading)
   const selectedTriggerId = useVal(store.publications.$.selectedTriggerId)
@@ -108,8 +54,6 @@ export function LiveTriggers({ store }: { readonly store: WorkbenchStore }): Rea
   const live = useVal(store.workspace.$.live)
   const enabled = live?.status == 'runnable'
   const revision = useVal(store.workspace.$.revision)
-  const [copiedEndpoint, setCopiedEndpoint] = useState<string>()
-  useEffect(() => setCopiedEndpoint(undefined), [detail?.binding.endpointUrl])
   const [root, setRoot] = useState<HTMLElement | null>(null)
   const opener = useRef<HTMLButtonElement | null>(null)
   const portal = useCallback((element: HTMLElement | null) => setRoot(element?.closest<HTMLElement>('.open-flow-workbench') ?? null), [])
@@ -198,19 +142,7 @@ export function LiveTriggers({ store }: { readonly store: WorkbenchStore }): Rea
                 {detail.binding.endpointUrl != null && (
                   <div className="trigger-webhook">
                     <span>{t('publication.webhookUrl')}</span>
-                    <div>
-                      <code title={detail.binding.endpointUrl}>{detail.binding.endpointUrl}</code>
-                      <Button
-                        onClick={async () => {
-                          await navigator.clipboard.writeText(detail.binding.endpointUrl!)
-                          setCopiedEndpoint(detail.binding.endpointUrl)
-                        }}
-                        size="sm"
-                        variant="outline"
-                      >
-                        {t(copiedEndpoint == detail.binding.endpointUrl ? 'publication.webhookCopied' : 'publication.webhookCopy')}
-                      </Button>
-                    </div>
+                    <WebhookEndpoint key={detail.binding.endpointUrl} endpointUrl={detail.binding.endpointUrl} />
                   </div>
                 )}
                 <div className="trigger-binding-detail-sections">

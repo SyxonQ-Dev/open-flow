@@ -256,6 +256,10 @@
     font-weight: 500;
   }
 
+  .trigger-binding-state.neutral {
+    color: var(--ui-muted-foreground);
+  }
+
   .trigger-binding-state.success {
     color: var(--success-foreground);
   }
@@ -318,26 +322,6 @@
     margin-top: 16px;
     color: var(--ui-muted-foreground);
     font-size: 12px;
-  }
-
-  .trigger-webhook code {
-    flex: 1;
-    min-width: 0;
-    color: var(--ui-foreground);
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 12px;
-    overflow-wrap: anywhere;
-  }
-
-  .trigger-webhook > div {
-    display: flex;
-    min-width: 0;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .trigger-webhook [data-slot='button'] {
-    flex: none;
   }
 
   .trigger-binding-detail-sections {

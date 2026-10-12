@@ -1009,6 +1009,14 @@
     "description": "Описание",
     "required": "Требуется вход"
   },
+  "webhookDeployment": {
+    "title": "Опубликованный Webhook",
+    "unpublished": "Опубликуйте процесс, чтобы создать URL Webhook.",
+    "unpublishedChanges": "Используется опубликованная версия. Изменения черновика ещё не применены.",
+    "loadFailed": "Не удалось загрузить данные развёртывания Webhook.",
+    "pending": "URL Webhook пока недоступен.",
+    "copyFailed": "Не удалось скопировать. Выделите URL и скопируйте его вручную."
+  },
   "webhookEditor": {
     "webhookAddHeader": "Добавить заголовок",
     "webhookDeleteHeader": "Удалить заголовок ответа",

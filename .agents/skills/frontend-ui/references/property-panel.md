@@ -38,6 +38,10 @@ Outputs. The operation determines the generated ports; unconfigured nodes omit t
 Provider triggers place their Options section immediately before Outputs so provider-specific
 configuration precedes the data it produces.
 
+Webhook inspectors place a read-only Live Webhook summary before the section sequence. It shows
+the current deployment URL and status, independently of draft configuration. Unpublished changes
+are identified explicitly; publication snapshots omit this live summary.
+
 ## Route by task
 
 Read only the detail relevant to the change; combine references when a task crosses domains.

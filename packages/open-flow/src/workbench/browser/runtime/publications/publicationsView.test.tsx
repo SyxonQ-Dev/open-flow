@@ -49,7 +49,7 @@ function renderState({ failedLoad = false, published = false, loading = false, i
         loadMoreFailed: val(false),
         nextCursor: val(undefined),
         rollingBackPublicationId: val(undefined),
-        bindings: val([]),
+        bindings: val({ status: 'loaded', bindings: [] }),
         detail: val(undefined),
         detailLoading: val(false),
         selectedTriggerId: val(undefined),

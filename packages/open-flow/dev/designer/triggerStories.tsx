@@ -16,7 +16,7 @@ import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '../../src/ui/b
 import { NodeInspector } from '../../src/workbench/browser/runtime/editor/nodeInspector.tsx'
 import { TriggerSummary } from '../../src/workbench/browser/runtime/editor/triggerSummary.tsx'
 import { createI18n } from '../../src/workbench/browser/runtime/i18n.ts'
-import { ListenerHealth, TriggerStatus } from '../../src/workbench/browser/runtime/publications/liveTriggers.tsx'
+import { ListenerHealth, TriggerStatus } from '../../src/workbench/browser/runtime/publications/triggerStatus.tsx'
 import { RunControl } from '../../src/workbench/browser/runtime/runs/runControl.tsx'
 import { RunInputPanel } from '../../src/workbench/browser/runtime/runs/runInputPanel.tsx'
 import { RunRequestStore } from '../../src/workbench/browser/runtime/runs/runRequestStore.ts'
@@ -379,6 +379,11 @@ type SidebarState =
   | 'connection-error'
   | 'description'
   | 'no-event-sources'
+  | 'paused'
+  | 'deployment-loading'
+  | 'deployment-error'
+  | 'retired'
+  | 'deployment-failed'
 function SidebarSample({ fixture, dark, language, log, state, framed = true }: StoryProps & { state: SidebarState; framed?: boolean }) {
   const [session, setSession] = useState<ReturnType<typeof createTriggerSession>>()
   const sidebar = useRef<HTMLDivElement>(null)
@@ -445,6 +450,31 @@ function SidebarSample({ fixture, dark, language, log, state, framed = true }: S
             theme={dark ? 'dark' : 'light'}
           >
             <NodeInspector
+              webhookDeployment={
+                fixture.trigger.kind === 'webhook'
+                  ? {
+                      binding:
+                        state === 'unconfigured'
+                          ? undefined
+                          : {
+                              version: 1,
+                              kind: 'webhook',
+                              flowId: revision.revision.flowId,
+                              triggerNodeId: selection!.id,
+                              currentPublicationId: state === 'retired' ? undefined : 'publication-1',
+                              currentRevisionId: 'revision-1',
+                              endpointUrl: 'https://automation.example.com/webhooks/flows/orders/receive-order-0123456789abcdef',
+                              health: state === 'deployment-failed' ? 'failed' : 'healthy',
+                              runtimeVersion: 1,
+                              updatedAt: '2026-10-12T00:00:00.000Z',
+                            },
+                      status: state === 'deployment-loading' ? 'loading' : state === 'deployment-error' ? 'failed' : 'loaded',
+                      enabled: state !== 'paused',
+                      hasUnpublishedChanges: state === 'edit',
+                      onRetry: () => log('Retry Webhook deployment'),
+                    }
+                  : undefined
+              }
               variables={{
                 enabled: false,
                 loaded: true,
@@ -493,7 +523,9 @@ function SidebarStory(props: StoryProps) {
           ? (['empty-options', 'missing-status', 'options-error'] as const)
           : []),
       ]
-    : ['display', 'edit', props.fixture.trigger.kind === 'manual' ? 'description' : 'unconfigured']
+    : props.fixture.trigger.kind === 'webhook'
+      ? ['display', 'edit', 'unconfigured', 'paused', 'deployment-loading', 'deployment-error', 'retired', 'deployment-failed']
+      : ['display', 'edit', props.fixture.trigger.kind === 'manual' ? 'description' : 'unconfigured']
   return (
     <Gallery {...props}>
       <div className="trigger-case-grid">
@@ -679,7 +711,9 @@ export const triggerStories: readonly FrontendStory[] = [
             ? 'Flow Error · Verify upstream multi-selection above Outputs in editable and read-only panels, including localized text wrapping.'
             : fixture.trigger.kind === 'manual'
               ? 'Manual · Read-only and editable properties share a fixed No outputs state. Changes stay in this Lab session.'
-              : `${fixture.trigger.name} · Node properties in display and edit states. Changes stay in this Lab session.`,
+              : fixture.trigger.kind === 'webhook'
+                ? 'Webhook · Compare live, unpublished, draft changes, paused, loading and failed deployments. Copy the live URL directly from Properties.'
+                : `${fixture.trigger.name} · Node properties in display and edit states. Changes stay in this Lab session.`,
         standalone: true,
         render: (log, dark, language) => <SidebarStory fixture={fixture} log={log} dark={dark} language={language} />,
       },

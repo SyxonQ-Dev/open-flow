@@ -1009,6 +1009,14 @@
     "description": "說明",
     "required": "需要輸入"
   },
+  "webhookDeployment": {
+    "title": "線上 Webhook",
+    "unpublished": "發佈後產生 Webhook 位址。",
+    "unpublishedChanges": "線上使用已發佈版本，草稿修改尚未生效。",
+    "loadFailed": "無法載入 Webhook 部署資訊。",
+    "pending": "Webhook 位址尚未就緒。",
+    "copyFailed": "複製失敗，請選取位址手動複製。"
+  },
   "webhookEditor": {
     "webhookAddHeader": "新增標頭",
     "webhookDeleteHeader": "刪除回應標頭",

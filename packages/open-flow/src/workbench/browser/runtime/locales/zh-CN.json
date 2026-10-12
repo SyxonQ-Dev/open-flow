@@ -1009,6 +1009,14 @@
     "description": "说明",
     "required": "需要输入"
   },
+  "webhookDeployment": {
+    "title": "线上 Webhook",
+    "unpublished": "发布后生成 Webhook 地址。",
+    "unpublishedChanges": "线上使用已发布版本，草稿修改尚未生效。",
+    "loadFailed": "无法加载 Webhook 部署信息。",
+    "pending": "Webhook 地址暂未就绪。",
+    "copyFailed": "复制失败，请选中地址手动复制。"
+  },
   "webhookEditor": {
     "webhookAddHeader": "添加响应头",
     "webhookDeleteHeader": "删除响应头",

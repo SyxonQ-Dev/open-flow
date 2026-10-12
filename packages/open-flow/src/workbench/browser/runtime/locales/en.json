@@ -1009,6 +1009,14 @@
     "description": "Description",
     "required": "Input required"
   },
+  "webhookDeployment": {
+    "title": "Live Webhook",
+    "unpublished": "Publish this flow to generate a Webhook URL.",
+    "unpublishedChanges": "Live uses the published version. Draft changes are not live yet.",
+    "loadFailed": "Could not load the Webhook deployment.",
+    "pending": "The Webhook URL is not available yet.",
+    "copyFailed": "Could not copy. Select the URL and copy it manually."
+  },
   "webhookEditor": {
     "webhookAddHeader": "Add header",
     "webhookDeleteHeader": "Delete response header",

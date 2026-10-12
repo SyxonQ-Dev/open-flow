@@ -117,7 +117,11 @@ function renderWorkspace(busy?: string, withTrigger = true, invalid = false, sel
       dismissInputs: vi.fn(),
       inputStatus: vi.fn(() => 'none'),
     },
-    publications: { publish: vi.fn().mockResolvedValue(true) },
+    publications: {
+      $: { bindings: value({ status: 'idle', bindings: [] }) },
+      loadBindings: vi.fn().mockResolvedValue(undefined),
+      publish: vi.fn().mockResolvedValue(true),
+    },
     runs: { $: { externalRunId: value(undefined) } },
     triggers: {
       catalog: { state: value({ data: undefined, refreshing: false, error: undefined }), open: vi.fn() },

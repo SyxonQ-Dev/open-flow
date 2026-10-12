@@ -1009,6 +1009,14 @@
     "description": "説明",
     "required": "入力が必要"
   },
+  "webhookDeployment": {
+    "title": "公開中の Webhook",
+    "unpublished": "公開すると Webhook URL が生成されます。",
+    "unpublishedChanges": "公開済みのバージョンが使用されています。下書きの変更はまだ反映されていません。",
+    "loadFailed": "Webhook のデプロイ情報を読み込めませんでした。",
+    "pending": "Webhook URL はまだ利用できません。",
+    "copyFailed": "コピーできませんでした。URL を選択して手動でコピーしてください。"
+  },
   "webhookEditor": {
     "webhookAddHeader": "レスポンスヘッダーを追加",
     "webhookDeleteHeader": "レスポンスヘッダーを削除",

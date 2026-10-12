@@ -1009,6 +1009,14 @@
     "description": "Description",
     "required": "Entrée requise"
   },
+  "webhookDeployment": {
+    "title": "Webhook en ligne",
+    "unpublished": "Publiez ce flux pour générer une URL Webhook.",
+    "unpublishedChanges": "La version publiée est utilisée. Les modifications du brouillon ne sont pas encore en ligne.",
+    "loadFailed": "Impossible de charger le déploiement du Webhook.",
+    "pending": "L’URL Webhook n’est pas encore disponible.",
+    "copyFailed": "Échec de la copie. Sélectionnez l’URL et copiez-la manuellement."
+  },
   "webhookEditor": {
     "webhookAddHeader": "Ajouter un en-tête",
     "webhookDeleteHeader": "Supprimer l'en-tête de réponse",

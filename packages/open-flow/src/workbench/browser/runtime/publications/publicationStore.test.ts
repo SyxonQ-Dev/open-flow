@@ -304,3 +304,133 @@ it('aborts an in-flight operation read on Flow switch and preserves it for later
     workspace.dispose()
   }
 })
+
+function setup(request: (path: string) => Promise<Response>) {
+  const client = new WorkbenchClient(request)
+  const workspace = new WorkspaceStore(client, vi.fn())
+  const store = new PublicationStore(client, workspace, vi.fn(), { getItem: () => null, setItem: vi.fn() })
+  return {
+    store,
+    dispose: () => {
+      store.dispose()
+      workspace.dispose()
+    },
+  }
+}
+
+describe('Webhook deployment reads', () => {
+  const binding = {
+    flowId: 'flow-1',
+    triggerNodeId: 'webhook',
+    kind: 'webhook',
+    currentPublicationId: 'publication-1',
+    endpointUrl: 'https://example.com/webhooks/live',
+    health: 'healthy',
+    runtimeVersion: 1,
+    updatedAt: timestamp,
+    version: 1,
+  } as const
+
+  it('loads the endpoint without publication history and distinguishes failure from an unpublished node', async () => {
+    const response = Promise.withResolvers<Response>()
+    const request = vi
+      .fn()
+      .mockImplementationOnce(() => response.promise)
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockResolvedValueOnce(Response.json({ bindings: [], flowId: 'flow-1', version: 1 }))
+    const { store, dispose } = setup(request)
+    try {
+      const loading = store.loadBindings('flow-1')
+      expect(store.$.bindings.value.status).toBe('loading')
+      response.resolve(Response.json({ bindings: [binding], flowId: 'flow-1', version: 1 }))
+      await loading
+      expect(request.mock.calls.map(([path]) => path)).toEqual(['/v1/flows/flow-1/triggers'])
+      expect(store.$.bindings.value.bindings).toEqual([binding])
+      expect(store.$.bindings.value.status).toBe('loaded')
+      await store.loadBindings('flow-1')
+      expect(store.$.bindings.value.status).toBe('failed')
+      expect(store.$.bindings.value.bindings).toEqual([binding])
+      await store.loadBindings('flow-1')
+      expect(store.$.bindings.value.status).toBe('loaded')
+      expect(store.$.bindings.value.bindings).toEqual([])
+    } finally {
+      dispose()
+    }
+  })
+
+  it('does not restore an old endpoint after switching flows or resetting', async () => {
+    const stale = Promise.withResolvers<Response>()
+    const next = { ...binding, flowId: 'flow-2', endpointUrl: 'https://example.com/webhooks/next' }
+    const request = vi
+      .fn()
+      .mockImplementationOnce(() => stale.promise)
+      .mockResolvedValueOnce(Response.json({ bindings: [next], flowId: 'flow-2', version: 1 }))
+    const { store, dispose } = setup(request)
+    try {
+      const loading = store.loadBindings('flow-1')
+      await store.loadBindings('flow-2')
+      stale.resolve(Response.json({ bindings: [binding], flowId: 'flow-1', version: 1 }))
+      await loading
+      expect(store.$.bindings.value.bindings).toEqual([next])
+      const pending = Promise.withResolvers<Response>()
+      request.mockImplementationOnce(() => pending.promise)
+      const resetting = store.loadBindings('flow-2')
+      store.reset()
+      pending.resolve(Response.json({ bindings: [next], flowId: 'flow-2', version: 1 }))
+      await resetting
+      expect(store.$.bindings.value.status).toBe('idle')
+      expect(store.$.bindings.value.bindings).toEqual([])
+    } finally {
+      dispose()
+    }
+  })
+
+  it('keeps publication history and pagination scoped when the inspector reads another flow', async () => {
+    const requests: string[] = []
+    const { store, dispose } = setup(async (path) => {
+      requests.push(path)
+      if (path.endsWith('/live'))
+        return Response.json({ flowId: 'flow-1', hasUnpublishedChanges: false, publication, revision: 1, status: 'runnable', version: 1 })
+      if (path.includes('/publications?')) return Response.json({ publications: [publication], nextCursor: 'next', total: 2, version: 1 })
+      if (path === '/v1/flows/flow-1/triggers') return Response.json({ bindings: [binding], flowId: 'flow-1', version: 1 })
+      if (path === '/v1/flows/flow-2/triggers') return Response.json({ bindings: [], flowId: 'flow-2', version: 1 })
+      throw new Error('Unexpected request: ' + path)
+    })
+    try {
+      await store.load('flow-1')
+      await store.loadBindings('flow-2')
+      expect(store.$.bindings.value).toEqual({ flowId: 'flow-2', status: 'loaded', bindings: [] })
+      expect(store.$.publications.value).toEqual([publication])
+      await store.loadMore()
+      expect(requests.at(-1)).toMatch(/^\/v1\/flows\/flow-1\/publications\?.*cursor=next/)
+    } finally {
+      dispose()
+    }
+  })
+
+  it('lets a publication refresh replace an older inspector read', async () => {
+    const stale = Promise.withResolvers<Response>()
+    let triggerReads = 0
+    const next = { ...binding, currentPublicationId: 'publication-2' }
+    const { store, dispose } = setup(async (path) => {
+      if (path.endsWith('/triggers')) {
+        if (++triggerReads == 1) return stale.promise
+        return Response.json({ bindings: [next], flowId: 'flow-1', version: 1 })
+      }
+      if (path.endsWith('/live'))
+        return Response.json({ flowId: 'flow-1', hasUnpublishedChanges: false, publication, revision: 1, status: 'runnable', version: 1 })
+      if (path.includes('/publications?')) return Response.json({ publications: [publication], total: 1, version: 1 })
+      throw new Error('Unexpected request: ' + path)
+    })
+    try {
+      const loading = store.loadBindings('flow-1')
+      await store.load('flow-1')
+      stale.resolve(Response.json({ bindings: [binding], flowId: 'flow-1', version: 1 }))
+      await loading
+      expect(store.$.bindings.value.bindings).toEqual([next])
+      expect(store.$.bindings.value.status).toBe('loaded')
+    } finally {
+      dispose()
+    }
+  })
+})

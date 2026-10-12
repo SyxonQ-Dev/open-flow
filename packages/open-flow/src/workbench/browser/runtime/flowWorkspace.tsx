@@ -109,6 +109,13 @@ const NodeInspectorContainer = memo(function NodeInspectorContainer({
 }): ReactElement {
   const t = useTranslate()
   const language = useLang()
+  const bindings = useVal(store.publications.$.bindings)
+  const live = useVal(store.workspace.$.live)
+  const webhookId = selection?.kind == 'trigger' && selection.trigger.kind == 'webhook' ? selection.id : undefined
+  const flowId = revision.revision.flowId
+  useEffect(() => {
+    if (webhookId != null) void store.publications.loadBindings(flowId)
+  }, [store, flowId, webhookId])
   const variableNames = useVal(store.$.variableNames)
   const variableNamesLoaded = useVal(store.$.variableNamesLoaded)
   const variableNamesLoading = useVal(store.$.variableNamesLoading)
@@ -167,6 +174,17 @@ const NodeInspectorContainer = memo(function NodeInspectorContainer({
   }, [language, store])
   return (
     <NodeInspector
+      webhookDeployment={
+        webhookId == null
+          ? undefined
+          : {
+              binding: bindings.bindings.find((binding) => binding.flowId == flowId && binding.triggerNodeId == webhookId && binding.kind == 'webhook'),
+              status: bindings.flowId === flowId ? bindings.status : 'idle',
+              enabled: live?.status == 'runnable',
+              hasUnpublishedChanges: live?.hasUnpublishedChanges ?? false,
+              onRetry: () => void store.publications.loadBindings(flowId),
+            }
+      }
       variables={{
         enabled: store.variablesEnabled,
         names: variableNames,

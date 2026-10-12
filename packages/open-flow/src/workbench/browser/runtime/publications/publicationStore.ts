@@ -34,13 +34,20 @@ interface Attempt {
   readonly signature: string
 }
 
+export interface TriggerBindingsState {
+  readonly flowId?: string
+  readonly status: 'idle' | 'loading' | 'loaded' | 'failed'
+  readonly bindings: readonly TriggerBinding[]
+}
+
+const initialBindings: TriggerBindingsState = { status: 'idle', bindings: [] }
+
 interface PublicationState {
   readonly activities: readonly TriggerActivity[]
   readonly activitiesLoadFailed: boolean
   readonly activitiesLoading: boolean
   readonly activitiesLoadingMore: boolean
   readonly activitiesNextCursor?: string
-  readonly bindings: readonly TriggerBinding[]
   readonly detail?: TriggerBindingDetail
   readonly detailLoading: boolean
   readonly live?: Live
@@ -81,7 +88,7 @@ export interface Publication$ {
   readonly activitiesLoading: ReadonlyVal<boolean>
   readonly activitiesLoadingMore: ReadonlyVal<boolean>
   readonly activitiesNextCursor: ReadonlyVal<string | undefined>
-  readonly bindings: ReadonlyVal<readonly TriggerBinding[]>
+  readonly bindings: ReadonlyVal<TriggerBindingsState>
   readonly detail: ReadonlyVal<TriggerBindingDetail | undefined>
   readonly detailLoading: ReadonlyVal<boolean>
   readonly live: ReadonlyVal<Live | undefined>
@@ -106,7 +113,6 @@ const initialState: PublicationState = {
   activitiesLoadFailed: false,
   activitiesLoading: false,
   activitiesLoadingMore: false,
-  bindings: [],
   detailLoading: false,
   loaded: false,
   loadFailed: false,
@@ -130,6 +136,8 @@ export class PublicationStore {
   readonly #client: Client
   readonly #identity: () => string
   readonly #i18n: I18n
+  readonly #bindings: Val<TriggerBindingsState> = val(initialBindings)
+  readonly #bindingLoads = new Latest()
   readonly #loads = new Latest()
   readonly #operation = new Latest()
   readonly #preferences: WorkbenchPreferences
@@ -163,7 +171,7 @@ export class PublicationStore {
       activitiesLoading: derive(this.#state, (state) => state.activitiesLoading),
       activitiesLoadingMore: derive(this.#state, (state) => state.activitiesLoadingMore),
       activitiesNextCursor: derive(this.#state, (state) => state.activitiesNextCursor),
-      bindings: derive(this.#state, (state) => state.bindings),
+      bindings: this.#bindings,
       detail: derive(this.#state, (state) => state.detail),
       detailLoading: derive(this.#state, (state) => state.detailLoading),
       live: derive(this.#state, (state) => state.live),
@@ -185,6 +193,7 @@ export class PublicationStore {
   }
 
   public dispose(): void {
+    this.#bindingLoads.invalidate()
     this.#loads.invalidate()
     this.#operation.invalidate()
     this.#stopObservation()
@@ -195,6 +204,8 @@ export class PublicationStore {
   }
 
   public reset(): void {
+    this.#bindingLoads.invalidate()
+    this.#bindings.set(initialBindings)
     this.#loads.invalidate()
     this.#operation.invalidate()
     this.#stopObservation()
@@ -221,11 +232,11 @@ export class PublicationStore {
     }
     try {
       const operation = warm ? state.operation : await this.#storedOperation(target)
-      const [live, page, bindings] = await this.#read(target)
+      if (!current()) return
+      const [live, page] = await this.#read(target)
       if (!current()) return
       this.#workspace.updateLive(live)
       this.#set({
-        bindings,
         live,
         loaded: true,
         loading: false,
@@ -243,6 +254,29 @@ export class PublicationStore {
       if (!current()) return
       this.#set({ loadFailed: !warm, loading: false, refreshing: false })
       this.#setNotice(errorNotice(error, this.#i18n.t))
+    }
+  }
+
+  public async loadBindings(flowId: string): Promise<void> {
+    try {
+      await this.#readBindings(flowId)
+    } catch {
+      // The inspector displays the load failure with a retry action.
+    }
+  }
+
+  async #readBindings(flowId: string, signal?: AbortSignal): Promise<void> {
+    const previous = this.#bindings.value
+    const current = this.#bindingLoads.begin()
+    this.#bindings.set({ flowId, status: 'loading', bindings: previous.flowId === flowId ? previous.bindings : [] })
+    try {
+      const bindings = await this.#client.listFlowTriggerBindings(flowId, signal)
+      if (!current()) return
+      this.#bindings.set({ flowId, status: 'loaded', bindings })
+    } catch (error) {
+      if (!current()) return
+      this.#bindings.set({ ...this.#bindings.value, status: 'failed' })
+      throw error
     }
   }
 
@@ -452,7 +486,7 @@ export class PublicationStore {
 
   async #refresh(target: Target, signal?: AbortSignal): Promise<void> {
     const current = this.#loads.begin()
-    const [live, page, bindings] = await this.#read(target, signal).catch((error) => {
+    const [live, page] = await this.#read(target, signal).catch((error) => {
       if (current() && sameTarget(this.#state.value.target, target)) this.#set({ refreshing: false })
       throw error
     })
@@ -460,7 +494,6 @@ export class PublicationStore {
     if (current()) this.#workspace.updateLive(live)
     if (current() && sameTarget(this.#state.value.target, target)) {
       this.#set({
-        bindings,
         live,
         loaded: true,
         loadFailed: false,
@@ -487,7 +520,7 @@ export class PublicationStore {
     return await Promise.all([
       this.#client.getLive(target.flowId, signal),
       this.#client.listPublications(target.flowId, { includeTotal: true, limit: pageLimit }, signal),
-      this.#client.listFlowTriggerBindings(target.flowId, signal),
+      this.#readBindings(target.flowId, signal),
     ])
   }
 

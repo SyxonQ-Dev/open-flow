@@ -113,8 +113,15 @@ export function driver(lab: LabSession, transport: 'cli' | 'mcp'): ToolCall {
                   .slice(5)
               : raw,
           )
-        const value = parsed.result?.structuredContent ?? parsed.error ?? JSON.parse(parsed.result?.content?.[0]?.text ?? '{}')
         const failed = !response.ok || parsed.error != null || parsed.result?.isError
+        let value = parsed.result?.structuredContent ?? parsed.error
+        if (value == null) {
+          const text = parsed.result?.content
+            ?.filter((item: { type: string }) => item.type == 'text')
+            .map((item: { text: string }) => item.text)
+            .join('\n')
+          value = failed ? { error: { message: text || 'The MCP request failed.' } } : JSON.parse(text ?? '{}')
+        }
         if (failed) stderr = JSON.stringify(value)
         else stdout = JSON.stringify(value)
         record = {

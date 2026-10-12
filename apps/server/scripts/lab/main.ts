@@ -16,7 +16,7 @@ import { labFetch, labOrigins } from './network.ts'
 import { servePreview } from './preview.ts'
 import { reference } from './reference.ts'
 import { compare, summary, reportText } from './report.ts'
-import { scenarios, scenario, stageCount } from './scenarios.ts'
+import { scenarios, scenario, stageCount, testScenarios } from './scenarios.ts'
 import { LabSession, jsonFile, saveJson } from './session.ts'
 import { agentPrompt, startupMessage } from './terminal.ts'
 
@@ -115,11 +115,7 @@ async function start(id: string) {
 async function test(id?: string, keepFailed = false, transport: 'cli' | 'mcp' = 'cli') {
   const source = await readFile(import.meta.filename)
   let failures = 0
-  for (const item of id == null ? scenarios : [scenario(id)]) {
-    if ('transport' in item && item.transport != transport) {
-      if (id != null) throw new Error(`${item.id} supports ${item.transport} only.`)
-      continue
-    }
+  for (const item of testScenarios(transport, id)) {
     const directory = await mkdtemp(path.join(tmpdir(), 'open-flow-lab-'))
     const lab = new LabSession(directory, item.id)
     const attempts: Attempt[] = []

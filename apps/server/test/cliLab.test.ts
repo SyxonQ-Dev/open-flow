@@ -10,7 +10,7 @@ import { driver } from '../scripts/lab/driver.ts'
 import { servePreview } from '../scripts/lab/preview.ts'
 import { reference } from '../scripts/lab/reference.ts'
 import { summary, compare, reportText } from '../scripts/lab/report.ts'
-import { scenarios, stageCount } from '../scripts/lab/scenarios.ts'
+import { scenarios, stageCount, testScenarios } from '../scripts/lab/scenarios.ts'
 import { LabSession } from '../scripts/lab/session.ts'
 import { agentPrompt, startupMessage } from '../scripts/lab/terminal.ts'
 
@@ -46,6 +46,27 @@ async function cli(lab: LabSession, args: string[], stdin?: string, registered =
   return { record, stdout, stderr }
 }
 describe('CLI Lab', () => {
+  it('keeps CLI-only scenarios in CLI coverage and rejects explicit unsupported transports', () => {
+    expect(testScenarios('cli').some((item) => item.id == 'webhook-live')).toBe(true)
+    expect(testScenarios('mcp').some((item) => item.id == 'webhook-live')).toBe(false)
+    for (const transport of ['cli', 'mcp'] as const) expect(testScenarios(transport).some((item) => item.id == 'order-alert')).toBe(true)
+    expect(testScenarios('cli', 'webhook-live').map((item) => item.id)).toEqual(['webhook-live'])
+    expect(() => testScenarios('mcp', 'webhook-live')).toThrow('webhook-live supports cli only.')
+  })
+
+  it('records MCP text validation errors without replacing them with JSON parsing failures', async () => {
+    const lab = await fixture()
+    const before = lab.head()
+    await expect(driver(lab, 'mcp')('flow_publish', { flowId: lab.manifest.flowId })).rejects.toThrow('Input validation')
+    expect(lab.head()).toBe(before)
+    expect(lab.active.size).toBe(0)
+    const command = lab.attempt.commands.at(-1)!
+    expect(command.exitCode).toBe(1)
+    const error = JSON.parse(await readFile(path.join(lab.directory, `${lab.attempt.id}.${command.id}.stderr`), 'utf8'))
+    expect(error.error.message).toContain('Input validation')
+    expect(command.stderrBytes).toBeGreaterThan(0)
+  })
+
   it('provides a complete public task prompt without credentials or fixture identities', async () => {
     const lab = await fixture('specialize-summary')
     const task = scenarios.find((item) => item.id == lab.scenarioId)!
@@ -202,9 +223,9 @@ describe('CLI Lab', () => {
   })
 
   it.each(['cli', 'mcp'] as const)(
-    'solves every redesigned scenario through %s using independent acceptance',
+    'solves every supported scenario through %s using independent acceptance',
     async (transport) => {
-      for (const scenario of scenarios) {
+      for (const scenario of testScenarios(transport)) {
         const lab = await fixture(scenario.id)
         for (let stage = 0; stage < stageCount(scenario.id); stage++) {
           await reference(driver(lab, transport), scenario.id, lab.manifest.flowId, stage)

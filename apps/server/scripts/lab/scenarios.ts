@@ -72,6 +72,14 @@ export function scenario(id: string, stage = 0): Scenario {
   if (current == null) throw new Error('Unknown fulfillment stage')
   return { ...found, name: `${found.name} (${stage + 1}/${fulfillmentStages.length}: ${current.name})`, task: current.task }
 }
+/** Reference suites run only scenarios supported by their selected transport. */
+export function testScenarios(transport: 'cli' | 'mcp', id?: string): readonly Scenario[] {
+  return (id == null ? scenarios : [scenario(id)]).filter((item) => {
+    if (!('transport' in item) || item.transport == transport) return true
+    if (id != null) throw new Error(`${item.id} supports ${item.transport} only.`)
+    return false
+  })
+}
 export function stageCount(id: string) {
   return id == 'fulfillment-ops' ? fulfillmentStages.length : 1
 }
